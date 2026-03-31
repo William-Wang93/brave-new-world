@@ -999,7 +999,8 @@ export default function App(){
     }
 
     // Save entry immediately (no waiting for AI scoring)
-    await saveEntry(entry);
+    const { milestoneClaims, ...cleanEntry } = entry;
+    await saveEntry(cleanEntry);
     setShowForm(false);
     setEditEntry(null);
 
@@ -1022,7 +1023,7 @@ export default function App(){
         const { score, reasoning, error } = await res.json();
         if (!error && score >= 1) {
           // Update the entry with the score
-          await saveEntry({ ...entry, ai_score: score, ai_reasoning: reasoning });
+          await saveEntry({ ...cleanEntry, ai_score: score, ai_reasoning: reasoning });
         }
       }
     } catch (e) {
