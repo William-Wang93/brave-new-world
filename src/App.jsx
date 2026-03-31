@@ -115,6 +115,8 @@ function entryWeight(e) {
   if (connText.length > 20) w += 1;
   const hasAttach = (e.pdfs && e.pdfs.length > 0) || (e.sources && e.sources.some(s => s.url)) || (e.links && e.links.length > 0) || blocksHaveImage(e.insightBlocks) || blocksHaveImage(e.connectionBlocks);
   if (hasAttach) w += 1;
+  // Use AI score if available (1-5), otherwise fall back to mechanical (1-4)
+  if (e.ai_score && e.ai_score >= 1) return e.ai_score;
   return w;
 }
 
@@ -820,7 +822,7 @@ function SignalForm({ onSave, onCancel, initial }) {
 }
 
 // ─── FORM ───
-function Form({onSave,onCancel,xpData,initial}){
+function Form({onSave,onCancel,xpData,initial,completedMs}){
   const {xp,raw}=xpData;
   const [title, setTitle] = useState(initial?.title || "");
   // Multiple sources: array of {name, url}
@@ -847,9 +849,27 @@ function Form({onSave,onCancel,xpData,initial}){
   const addUrl=()=>{if(!nUrl.trim())return;setLinks(p=>[...p,{url:nUrl.trim(),label:nLbl.trim()||null}]);setNUrl("");setNLbl("");};
   const handleFiles=async e=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setUploading(true);for(const file of files){if(file.type!=="application/pdf")continue;if(file.size>4.5*1024*1024){alert("Max ~4.5MB");continue;}const data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});setPdfs(p=>[...p,{name:file.name,size:file.size,data}]);}setUploading(false);if(fileRef.current)fileRef.current.value="";};
 
+  // Milestone claims
+  const initClaims = initial?.milestoneClaims || {};
+  const [claims, setClaims] = useState(initClaims);
+  const affectedNodes = (C2N[cat]||[]).map(id=>NODES.find(n=>n.id===id)).filter(Boolean);
+  const toggleClaim = (nodeId, msIdx) => {
+    setClaims(prev => {
+      const nc = [...(prev[nodeId] || [])];
+      const i = nc.indexOf(msIdx);
+      if (i >= 0) nc.splice(i, 1); else nc.push(msIdx);
+      return { ...prev, [nodeId]: nc };
+    });
+  };
+  // Check which milestones are already completed
+  const isMsDone = (nodeId, msIdx) => {
+    const ms = completedMs?.[nodeId] || [];
+    return ms[msIdx] === true;
+  };
+
   const insightText = getTextFromBlocks(insightBlocks);
   const connText = getTextFromBlocks(connectionBlocks);
-  const hasAttach = pdfs.length > 0 || links.length > 0 || blocksHaveImage(insightBlocks) || blocksHaveImage(connectionBlocks);
+  const hasAttach = pdfs.length > 0 || (sources && sources.some(s => s.url)) || blocksHaveImage(insightBlocks) || blocksHaveImage(connectionBlocks);
   const previewWeight = (() => { let w=1; if(insightText.length>200)w+=1; if(connText.length>20)w+=1; if(hasAttach)w+=1; return w; })();
   const hasInsight = insightText.trim().length > 0 || insightBlocks.some(b => b.type === "image");
 
@@ -897,6 +917,32 @@ function Form({onSave,onCancel,xpData,initial}){
             return <option key={c} value={c}>{c}  →  {nodeNames}</option>;
           })}
         </select>
+        {/* Milestone claims */}
+        {affectedNodes.some(n => n.milestones?.length > 0) && (
+          <div style={{padding:"12px 14px",background:"#fdf8f0",border:"1px solid #e8dcc5",borderRadius:6}}>
+            <div style={{fontSize:11,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:"#c4882a",fontWeight:700,marginBottom:8}}>⚑ Claim Milestone</div>
+            <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",color:"#999",marginBottom:10}}>Does this entry satisfy a milestone? Check to mark it complete.</div>
+            {affectedNodes.filter(n => n.milestones?.length > 0).map(node => {
+              const nc = node.b ? BR[node.b]?.color : "#1a1a1a";
+              return (
+                <div key={node.id} style={{marginBottom:10}}>
+                  <div style={{fontSize:11,fontFamily:"'DM Sans',sans-serif",fontWeight:700,color:nc,marginBottom:4}}>{node.label}</div>
+                  {node.milestones.map((ms, mi) => {
+                    const done = isMsDone(node.id, mi);
+                    const claimed = (claims[node.id] || []).includes(mi);
+                    return (
+                      <div key={mi} onClick={() => { if (!done) toggleClaim(node.id, mi); }}
+                        style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:4,cursor:done?"default":"pointer",opacity:done?0.5:1}}>
+                        <span style={{width:14,height:14,borderRadius:3,border:(claimed||done)?"none":"1.5px solid #ccc",background:done?"#aaa":claimed?nc:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:9,color:"#fff",marginTop:1}}>{(claimed||done)?"✓":""}</span>
+                        <span style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",color:done?"#aaa":"#666",lineHeight:1.4,textDecoration:done?"line-through":"none"}}>{ms}{done?" (done)":""}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        )}
         <div style={{padding:"10px 14px",background:previewWeight>=3?"#f0faf5":"#f7f5f2",borderRadius:6,border:`1px solid ${previewWeight>=3?"#c5e8d5":"#e8e5e0"}`,display:"flex",alignItems:"center",gap:10}}>
           <span style={{fontSize:22,fontWeight:700,fontFamily:"'DM Sans',sans-serif",color:previewWeight>=3?"#2a6e4e":"#888"}}>{previewWeight}x</span>
           <div style={{fontSize:11,fontFamily:"'DM Sans',sans-serif",color:"#888",lineHeight:1.4}}>
@@ -909,7 +955,7 @@ function Form({onSave,onCancel,xpData,initial}){
       </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:10,padding:"0 22px 18px"}}>
         <button onClick={onCancel} style={{background:"transparent",border:"1px solid #ddd",padding:"10px 18px",fontSize:13,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",borderRadius:4,color:"#666"}}>Cancel</button>
-        <button onClick={()=>{if(!hasInsight||!title.trim())return;onSave({id:initial?.id||gid(),title:title.trim(),sources,source:sources.map(s=>s.name).join(", "),insightBlocks,connectionBlocks,insight:insightText,careerConnection:connText,category:cat,links,pdfs,date:initial?.date||new Date().toISOString()});}} disabled={!hasInsight||!title.trim()} style={{background:"#1a1a1a",color:"#fff",border:"none",padding:"10px 22px",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",borderRadius:4,opacity:(hasInsight&&title.trim())?1:0.4}}>{initial?"Update":"Save"}</button>
+        <button onClick={()=>{if(!hasInsight||!title.trim())return;onSave({id:initial?.id||gid(),title:title.trim(),sources,source:sources.map(s=>s.name).join(", "),insightBlocks,connectionBlocks,insight:insightText,careerConnection:connText,category:cat,pdfs,milestoneClaims:claims,date:initial?.date||new Date().toISOString()});}} disabled={!hasInsight||!title.trim()} style={{background:"#1a1a1a",color:"#fff",border:"none",padding:"10px 22px",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",borderRadius:4,opacity:(hasInsight&&title.trim())?1:0.4}}>{initial?"Update":"Save"}</button>
       </div>
     </div>
   </div>;
@@ -940,7 +986,44 @@ export default function App(){
   const {raw,xp,ul,av,hasMilestone}=xpData;
 
   const save = async (entry) => {
-    await saveEntry(entry);
+    // Process milestone claims
+    if (entry.milestoneClaims) {
+      for (const [nodeId, indices] of Object.entries(entry.milestoneClaims)) {
+        for (const idx of indices) {
+          const current = completedMs[nodeId] || [];
+          if (!current[idx]) {
+            await toggleMs(nodeId, idx);
+          }
+        }
+      }
+    }
+
+    // Call Claude API for quality scoring (non-blocking — save even if scoring fails)
+    let scoredEntry = { ...entry };
+    try {
+      const insightText = getTextFromBlocks(entry.insightBlocks || entry.insight);
+      const connText = getTextFromBlocks(entry.connectionBlocks || entry.careerConnection);
+      const res = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          insight: insightText,
+          careerConnection: connText,
+          category: entry.category,
+          title: entry.title,
+          sources: entry.sources,
+        }),
+      });
+      if (res.ok) {
+        const { score, reasoning } = await res.json();
+        scoredEntry.ai_score = score;
+        scoredEntry.ai_reasoning = reasoning;
+      }
+    } catch (e) {
+      console.error('Scoring failed:', e);
+    }
+
+    await saveEntry(scoredEntry);
     setShowForm(false);
     setEditEntry(null);
   };
@@ -1075,9 +1158,10 @@ export default function App(){
               return (<div key={e.id} id={`entry-${e.id}`} style={{background:"#fff",border:"1px solid #e5e2dc",borderRadius:6,padding:"20px 22px"}}>
               {e.title && <div style={{fontSize:20,fontWeight:700,fontFamily:"'Newsreader',Georgia,serif",marginBottom:6,lineHeight:1.3}}>{hl(e.title)}</div>}
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:6}}>
-                <span style={{fontSize:12,color:"#aaa",fontFamily:"'DM Sans',sans-serif"}}>{fd(e.date)}<span style={{marginLeft:6,color:(w>=3)?"#2a6e4e":"#bbb",fontWeight:600}}>{w}x XP</span></span>
+                <span style={{fontSize:12,color:"#aaa",fontFamily:"'DM Sans',sans-serif"}}>{fd(e.date)}<span style={{marginLeft:6,color:(w>=3)?"#2a6e4e":"#bbb",fontWeight:600}}>{w}x XP</span>{e.ai_score && <span style={{marginLeft:6,padding:"1px 6px",background:e.ai_score>=4?"#f0faf5":e.ai_score>=3?"#fdf8f0":"#f7f5f2",border:`1px solid ${e.ai_score>=4?"#c5e8d5":e.ai_score>=3?"#e8dcc5":"#e8e5e0"}`,borderRadius:3,fontSize:10,color:e.ai_score>=4?"#2a6e4e":e.ai_score>=3?"#b8860b":"#888",fontWeight:600}}>AI: {e.ai_score}/5</span>}</span>
                 <span style={{fontSize:11,color:"#777",fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",background:"#f3f1ee",padding:"2px 8px",borderRadius:3}}>{e.category}</span>
               </div>
+              {e.ai_reasoning && <div style={{fontSize:11,color:"#aaa",fontFamily:"'DM Sans',sans-serif",fontStyle:"italic",marginBottom:12}}>"{e.ai_reasoning}"</div>}
 
               <div style={secWrap("#8b2500")}>
                 <div style={secLabel("#8b2500")}>Key Insight</div>
@@ -1137,7 +1221,7 @@ export default function App(){
           <div style={{display:"flex",justifyContent:"flex-end",padding:"0 22px 18px"}}><button onClick={doAuth} style={{background:"#1a1a1a",color:"#fff",border:"none",padding:"10px 22px",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",borderRadius:4}}>Sign In</button></div>
         </div>
       </div>}
-      {showForm&&<Form xpData={xpData} initial={editEntry} onSave={save} onCancel={()=>{setShowForm(false);setEditEntry(null);}}/>}
+      {showForm&&<Form xpData={xpData} initial={editEntry} onSave={save} onCancel={()=>{setShowForm(false);setEditEntry(null);}} completedMs={completedMs}/>}
     </div>
     </div>
   );
