@@ -596,11 +596,21 @@ function FormattedArea({ value, onChange, placeholder, minHeight, style: s }) {
 }
 
 // ─── SIGNAL BOARD ───
-function SignalBoard({ signals, onAdd, onRemove, admin }) {
+function SignalBoard({ signals, onAdd, onRemove, admin, onPromote }) {
   const [showForm, setShowForm] = useState(false);
   const [filterNode, setFilterNode] = useState("All");
   const [filterType, setFilterType] = useState("All");
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(new Set());
+  const selecting = selected.size > 0;
+
+  const toggleSelect = (id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const filtered = signals.filter(s => {
     if (filterNode !== "All" && !s.nodes.includes(filterNode)) return false;
@@ -613,6 +623,11 @@ function SignalBoard({ signals, onAdd, onRemove, admin }) {
     return true;
   });
   const q = search.trim().toLowerCase();
+
+  const handlePromote = () => {
+    const sigs = signals.filter(s => selected.has(s.id));
+    if (sigs.length > 0) { onPromote(sigs); setSelected(new Set()); }
+  };
 
   return (
     <div>
@@ -640,9 +655,24 @@ function SignalBoard({ signals, onAdd, onRemove, admin }) {
           </button>
         )}
       </div>
+
+      {/* Selection bar */}
+      {admin && selecting && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "#f0faf5", border: "1px solid #c5e8d5", borderRadius: 6, marginBottom: 12, fontFamily: "'DM Sans',sans-serif" }}>
+          <span style={{ fontSize: 12, color: "#2a6e4e", fontWeight: 600 }}>{selected.size} selected</span>
+          <button onClick={handlePromote} style={{ padding: "6px 14px", background: "#2a6e4e", color: "#fff", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+            Promote to Archive →
+          </button>
+          <button onClick={() => setSelected(new Set())} style={{ padding: "6px 10px", background: "none", border: "1px solid #ccc", borderRadius: 4, fontSize: 11, cursor: "pointer", color: "#888" }}>
+            Cancel
+          </button>
+        </div>
+      )}
+
       <div style={{ fontSize: 11, color: "#999", fontFamily: "'DM Sans',sans-serif", marginBottom: 12 }}>
         {filtered.length} signal{filtered.length !== 1 ? "s" : ""}{filterNode !== "All" ? ` tagged ${NODES.find(n => n.id === filterNode)?.label}` : ""}
         {q && ` matching "${search}"`}
+        {admin && !selecting && filtered.length > 0 && <span style={{ color: "#bbb", marginLeft: 8 }}>· click cards to select for promotion</span>}
       </div>
       {filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 20px" }}>
@@ -654,7 +684,9 @@ function SignalBoard({ signals, onAdd, onRemove, admin }) {
       ) : (
         <div style={{ columnCount: 2, columnGap: 12 }}>
           {filtered.map(s => (
-            <SignalCard key={s.id} signal={s} admin={admin} onRemove={() => onRemove(s.id)} searchTerm={q} />
+            <SignalCard key={s.id} signal={s} admin={admin} onRemove={() => onRemove(s.id)} searchTerm={q}
+              isSelected={selected.has(s.id)} onSelect={() => toggleSelect(s.id)}
+              onPromoteSingle={() => onPromote([s])} />
           ))}
         </div>
       )}
@@ -663,18 +695,20 @@ function SignalBoard({ signals, onAdd, onRemove, admin }) {
   );
 }
 
-function SignalCard({ signal, admin, onRemove, searchTerm }) {
+function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect, onPromoteSingle }) {
   const [expanded, setExpanded] = useState(false);
   const typeInfo = SIG_TYPES.find(t => t.id === signal.type) || SIG_TYPES[0];
   const nodeNames = (signal.nodes || []).map(nid => NODES.find(n => n.id === nid)).filter(Boolean);
   return (
-    <div style={{ breakInside: "avoid", marginBottom: 12, background: "#fff", border: "1px solid #e5e2dc", borderRadius: 8, overflow: "hidden", cursor: "pointer", transition: "box-shadow .15s" }}
-      onClick={() => setExpanded(!expanded)}
-      onMouseEnter={e => e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,.08)"}
+    <div style={{ breakInside: "avoid", marginBottom: 12, background: isSelected ? "#f0faf5" : "#fff", border: isSelected ? "2px solid #2a6e4e" : "1px solid #e5e2dc", borderRadius: 8, overflow: "hidden", cursor: "pointer", transition: "all .15s" }}
+      onClick={() => { if (admin) onSelect(); else setExpanded(!expanded); }}
+      onDoubleClick={() => setExpanded(!expanded)}
+      onMouseEnter={e => { if (!isSelected) e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,.08)"; }}
       onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
       <div style={{ height: 3, background: typeInfo.color }} />
       <div style={{ padding: "12px 14px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+          {admin && <span style={{ width: 16, height: 16, borderRadius: 3, border: isSelected ? "none" : "1.5px solid #ccc", background: isSelected ? "#2a6e4e" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: "#fff", marginTop: 2 }}>{isSelected ? "✓" : ""}</span>}
           <span style={{ fontSize: 16, lineHeight: 1 }}>{typeInfo.icon}</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Newsreader',Georgia,serif", lineHeight: 1.3 }}><Highlight text={signal.title} term={searchTerm} /></div>
@@ -704,7 +738,9 @@ function SignalCard({ signal, admin, onRemove, searchTerm }) {
           <span style={{ fontSize: 10, color: "#bbb", fontFamily: "'DM Sans',sans-serif", marginLeft: "auto" }}>{fmtRelative(signal.date)}</span>
         </div>
         {admin && expanded && (
-          <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ marginTop: 8, display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <button onClick={(e) => { e.stopPropagation(); onPromoteSingle(); }}
+              style={{ background: "none", border: "none", fontSize: 11, color: "#2a6e4e", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textDecoration: "underline" }}>Promote →</button>
             <button onClick={(e) => { e.stopPropagation(); onRemove(); }}
               style={{ background: "none", border: "none", fontSize: 11, color: "#c44", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textDecoration: "underline" }}>Remove</button>
           </div>
@@ -778,7 +814,16 @@ function SignalForm({ onSave, onCancel }) {
 // ─── FORM ───
 function Form({onSave,onCancel,xpData,initial}){
   const {xp,raw}=xpData;
-  const [source,setSource]=useState(initial?.source||"");
+  // Multiple sources: array of {name, url}
+  const initSources = initial?.sources || (initial?.source ? [{name: initial.source, url: ""}] : []);
+  const [sources, setSources] = useState(initSources);
+  const [newSrcName, setNewSrcName] = useState("");
+  const [newSrcUrl, setNewSrcUrl] = useState("");
+  const addSource = () => {
+    if (!newSrcName.trim() && !newSrcUrl.trim()) return;
+    setSources(p => [...p, { name: newSrcName.trim(), url: newSrcUrl.trim() }]);
+    setNewSrcName(""); setNewSrcUrl("");
+  };
   // Convert legacy plain text to blocks
   const initInsight = initial?.insightBlocks || (initial?.insight ? [{type:"text",content:initial.insight}] : [{type:"text",content:""}]);
   const initConn = initial?.connectionBlocks || (initial?.careerConnection ? [{type:"text",content:initial.careerConnection}] : [{type:"text",content:""}]);
@@ -809,8 +854,21 @@ function Form({onSave,onCancel,xpData,initial}){
         <button onClick={onCancel} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#999"}}>✕</button>
       </div>
       <div style={{padding:"16px 22px",display:"flex",flexDirection:"column",gap:10}}>
-        <label style={S.lb}>Source</label>
-        <input style={S.inp} value={source} onChange={e=>setSource(e.target.value)} placeholder="Book, podcast, deal..."/>
+        <label style={S.lb}>Sources</label>
+        {sources.map((src, i) => (
+          <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{flex:1,padding:"6px 10px",background:"#f0ede8",borderRadius:4,border:"1px solid #e0ddd6"}}>
+              <div style={{fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,color:"#555"}}>{src.name || "Untitled source"}</div>
+              {src.url && <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",color:"#8b6508",wordBreak:"break-all"}}>{src.url}</div>}
+            </div>
+            <button onClick={()=>setSources(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:"none",color:"#c44",fontSize:14,cursor:"pointer"}}>✕</button>
+          </div>
+        ))}
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <input style={{...S.inp,flex:1}} value={newSrcName} onChange={e=>setNewSrcName(e.target.value)} placeholder="Source name (book, podcast, author...)" onKeyDown={e=>e.key==="Enter"&&(e.preventDefault(),addSource())}/>
+          <input style={{...S.inp,width:120}} value={newSrcUrl} onChange={e=>setNewSrcUrl(e.target.value)} placeholder="URL (optional)" onKeyDown={e=>e.key==="Enter"&&(e.preventDefault(),addSource())}/>
+          <button onClick={addSource} disabled={!newSrcName.trim()&&!newSrcUrl.trim()} style={{width:32,height:38,background:"#1a1a1a",color:"#fff",border:"none",borderRadius:4,fontSize:18,cursor:"pointer",opacity:(newSrcName.trim()||newSrcUrl.trim())?1:0.3}}>+</button>
+        </div>
         <label style={S.lb}>Key Insight * <span style={{textTransform:"none",fontWeight:400,color:"#bbb"}}>(add text and images)</span></label>
         <BlockEditor blocks={insightBlocks} onChange={setInsightBlocks} placeholder="What did you learn? Longer, deeper entries earn more XP." autoFocus />
         <label style={S.lb}>Career Connection <span style={{textTransform:"none",fontWeight:400,color:"#bbb"}}>(add text and images)</span></label>
@@ -847,7 +905,7 @@ function Form({onSave,onCancel,xpData,initial}){
       </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:10,padding:"0 22px 18px"}}>
         <button onClick={onCancel} style={{background:"transparent",border:"1px solid #ddd",padding:"10px 18px",fontSize:13,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",borderRadius:4,color:"#666"}}>Cancel</button>
-        <button onClick={()=>{if(!hasInsight)return;onSave({id:initial?.id||gid(),source,insightBlocks,connectionBlocks,insight:insightText,careerConnection:connText,category:cat,links,pdfs,date:initial?.date||new Date().toISOString()});}} disabled={!hasInsight} style={{background:"#1a1a1a",color:"#fff",border:"none",padding:"10px 22px",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",borderRadius:4,opacity:hasInsight?1:0.4}}>{initial?"Update":"Save"}</button>
+        <button onClick={()=>{if(!hasInsight)return;onSave({id:initial?.id||gid(),sources,source:sources.map(s=>s.name).join(", "),insightBlocks,connectionBlocks,insight:insightText,careerConnection:connText,category:cat,links,pdfs,date:initial?.date||new Date().toISOString()});}} disabled={!hasInsight} style={{background:"#1a1a1a",color:"#fff",border:"none",padding:"10px 22px",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",borderRadius:4,opacity:hasInsight?1:0.4}}>{initial?"Update":"Save"}</button>
       </div>
     </div>
   </div>;
@@ -888,6 +946,25 @@ export default function App(){
     const { error } = await signIn(authEmail, authPass);
     if (error) { setAuthError(error.message); }
     else { setShowAuth(false); setAuthEmail(""); setAuthPass(""); }
+  };
+
+  const promoteSignals = (sigs) => {
+    const sources = sigs.map(s => ({ name: s.source || s.title, url: s.url || "" })).filter(s => s.name);
+    const quotes = sigs.map(s => s.quote).filter(Boolean);
+    const notes = sigs.map(s => s.note).filter(Boolean);
+    const allText = [...quotes.map(q => `> ${q}`), ...notes].join("\n\n");
+    const prefill = {
+      sources,
+      source: sources.map(s => s.name).join(", "),
+      insightBlocks: [{ type: "text", content: allText }],
+      connectionBlocks: [{ type: "text", content: "" }],
+      links: sigs.filter(s => s.url).map(s => ({ url: s.url, label: s.source || s.title })),
+      category: CATS[0],
+      pdfs: [],
+    };
+    setEditEntry(prefill);
+    setShowForm(true);
+    setTab("archive");
   };
 
   const uc=NODES.filter(n=>ul(n.id)).length;
@@ -992,9 +1069,13 @@ export default function App(){
                 <span style={{fontSize:12,color:"#aaa",fontFamily:"'DM Sans',sans-serif"}}>{fd(e.date)}<span style={{marginLeft:6,color:(w>=3)?"#2a6e4e":"#bbb",fontWeight:600}}>{w}x XP</span></span>
                 <span style={{fontSize:11,color:"#777",fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",background:"#f3f1ee",padding:"2px 8px",borderRadius:3}}>{e.category}</span>
               </div>
-              {e.source && <div style={{marginBottom:10}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#bbb",fontWeight:600,marginBottom:3}}>Source</div>
-                <div style={{fontSize:13,color:"#888",fontFamily:"'DM Sans',sans-serif",fontStyle:"italic"}}>{hl(e.source)}</div>
+              {(e.sources?.length > 0 || e.source) && <div style={{marginBottom:10}}>
+                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#bbb",fontWeight:600,marginBottom:3}}>Source{e.sources?.length > 1 ? "s" : ""}</div>
+                {e.sources?.length > 0 ? e.sources.map((src, si) => (
+                  <div key={si} style={{fontSize:13,color:"#888",fontFamily:"'DM Sans',sans-serif",fontStyle:"italic",marginBottom:3}}>
+                    {src.url ? <a href={src.url} target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>{hl(src.name)}</a> : hl(src.name)}
+                  </div>
+                )) : <div style={{fontSize:13,color:"#888",fontFamily:"'DM Sans',sans-serif",fontStyle:"italic"}}>{hl(e.source)}</div>}
               </div>}
               <div style={{marginBottom:10}}>
                 <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#bbb",fontWeight:600,marginBottom:3}}>Key Insight</div>
@@ -1027,7 +1108,7 @@ export default function App(){
         </div>);
       })()}
 
-      {tab==="signals"&&<SignalBoard signals={signals} onAdd={addSignal} onRemove={removeSignal} admin={admin}/>}
+      {tab==="signals"&&<SignalBoard signals={signals} onAdd={addSignal} onRemove={removeSignal} admin={admin} onPromote={promoteSignals}/>}
 
       {tab==="stats"&&<StatsDashboard entries={entries} signals={signals} xpData={xpData} completedMs={completedMs}/>}
 
