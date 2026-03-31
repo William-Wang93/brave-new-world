@@ -115,8 +115,8 @@ function entryWeight(e) {
   if (connText.length > 20) w += 1;
   const hasAttach = (e.pdfs && e.pdfs.length > 0) || (e.sources && e.sources.some(s => s.url)) || (e.links && e.links.length > 0) || blocksHaveImage(e.insightBlocks) || blocksHaveImage(e.connectionBlocks);
   if (hasAttach) w += 1;
-  // Use AI score if available (1-5), otherwise fall back to mechanical (1-4)
-  if (e.ai_score && e.ai_score >= 1) return e.ai_score;
+  // Use AI score if available (0-5), otherwise fall back to mechanical (1-4)
+  if (e.ai_score !== undefined && e.ai_score !== null) return e.ai_score;
   return w;
 }
 
