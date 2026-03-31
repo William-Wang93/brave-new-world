@@ -22,6 +22,11 @@ const IC = {
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const fd=iso=>new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
 const fsize=b=>b<1048576?`${(b/1024).toFixed(0)} KB`:`${(b/1048576).toFixed(1)} MB`;
+const normalizeUrl = (url) => {
+  if (!url) return url;
+  if (url.match(/^https?:\/\//)) return url;
+  return "https://" + url;
+};
 const fmtRelative = (iso) => {
   const d = new Date(iso), now = new Date(), diff = Math.floor((now - d) / 1000);
   if (diff < 60) return "just now";
@@ -703,14 +708,13 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
   const nodeNames = (signal.nodes || []).map(nid => NODES.find(n => n.id === nid)).filter(Boolean);
   return (
     <div style={{ breakInside: "avoid", marginBottom: 12, background: isSelected ? "#f0faf5" : "#fff", border: isSelected ? "2px solid #2a6e4e" : "1px solid #e5e2dc", borderRadius: 8, overflow: "hidden", cursor: "pointer", transition: "all .15s" }}
-      onClick={() => { if (admin) onSelect(); else setExpanded(!expanded); }}
-      onDoubleClick={() => setExpanded(!expanded)}
+      onClick={() => setExpanded(!expanded)}
       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,.08)"; }}
       onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
       <div style={{ height: 3, background: typeInfo.color }} />
       <div style={{ padding: "12px 14px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
-          {admin && <span style={{ width: 16, height: 16, borderRadius: 3, border: isSelected ? "none" : "1.5px solid #ccc", background: isSelected ? "#2a6e4e" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: "#fff", marginTop: 2 }}>{isSelected ? "✓" : ""}</span>}
+          {admin && <span onClick={(e) => { e.stopPropagation(); onSelect(); }} style={{ width: 16, height: 16, borderRadius: 3, border: isSelected ? "none" : "1.5px solid #ccc", background: isSelected ? "#2a6e4e" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: "#fff", marginTop: 2, cursor: "pointer" }}>{isSelected ? "✓" : ""}</span>}
           <span style={{ fontSize: 16, lineHeight: 1 }}>{typeInfo.icon}</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Newsreader',Georgia,serif", lineHeight: 1.3 }}><Highlight text={signal.title} term={searchTerm} /></div>
@@ -728,7 +732,7 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
           </div>
         )}
         {signal.url && expanded && (
-          <a href={signal.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#8b6508", fontFamily: "'DM Sans',sans-serif", marginBottom: 6, wordBreak: "break-all", display: "block", textDecoration: "underline" }}>
+          <a href={normalizeUrl(signal.url)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#8b6508", fontFamily: "'DM Sans',sans-serif", marginBottom: 6, wordBreak: "break-all", display: "block", textDecoration: "underline" }}>
             🔗 {signal.url.length > 50 ? signal.url.slice(0, 50) + "..." : signal.url}
           </a>
         )}
@@ -1074,34 +1078,34 @@ export default function App(){
                 <span style={{fontSize:11,color:"#777",fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",background:"#f3f1ee",padding:"2px 8px",borderRadius:3}}>{e.category}</span>
               </div>
               {(e.sources?.length > 0 || e.source) && <div style={{marginBottom:10}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:3}}>Source{e.sources?.length > 1 ? "s" : ""}</div>
+                <div style={{fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:"#444",fontWeight:800,marginBottom:3}}>Source{e.sources?.length > 1 ? "s" : ""}</div>
                 {e.sources?.length > 0 ? e.sources.map((src, si) => (
                   <div key={si} style={{fontSize:13,color:"#888",fontFamily:"'DM Sans',sans-serif",fontStyle:"italic",marginBottom:3}}>
-                    {src.url ? <a href={src.url} target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>{hl(src.name)}</a> : hl(src.name)}
+                    {src.url ? <a href={normalizeUrl(src.url)} target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>{hl(src.name)}</a> : hl(src.name)}
                   </div>
                 )) : <div style={{fontSize:13,color:"#888",fontFamily:"'DM Sans',sans-serif",fontStyle:"italic"}}>{hl(e.source)}</div>}
               </div>}
               <div style={{marginBottom:10}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:3}}>Key Insight</div>
+                <div style={{fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:"#444",fontWeight:800,marginBottom:3}}>Key Insight</div>
                 {renderBlocks(e.insightBlocks, e.insight, {fontSize:15,color:"#1a1a1a"})}
               </div>
               {connText.length > 0 && <div style={{marginBottom:10,paddingTop:10,borderTop:"1px solid #f0ede8"}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:3}}>Career Connection</div>
+                <div style={{fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:"#444",fontWeight:800,marginBottom:3}}>Career Connection</div>
                 {renderBlocks(e.connectionBlocks, e.careerConnection, {fontSize:14,color:"#555",fontFamily:"'DM Sans',sans-serif"})}
               </div>}
               {e.pdfs && e.pdfs.length > 0 && <div style={{marginBottom:10,paddingTop:10,borderTop:"1px solid #f0ede8"}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:6}}>Attachments</div>
+                <div style={{fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:"#444",fontWeight:800,marginBottom:6}}>Attachments</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:10}}>{e.pdfs.map((p,i)=><PdfThumb key={i} pdf={p} isAdmin={admin}/>)}</div>
               </div>}
               {e.links && e.links.length > 0 && <div style={{marginBottom:10,paddingTop:10,borderTop:"1px solid #f0ede8"}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:6}}>Links</div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>{e.links.map((lk,i)=><a key={i} href={lk.url} target="_blank" rel="noopener noreferrer" style={{padding:"8px 12px",background:"#f8f6f3",borderRadius:5,border:"1px solid #e8e5e0",textDecoration:"none",display:"block"}}>
+                <div style={{fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:"#444",fontWeight:800,marginBottom:6}}>Links</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>{e.links.map((lk,i)=><a key={i} href={normalizeUrl(lk.url)} target="_blank" rel="noopener noreferrer" style={{padding:"8px 12px",background:"#f8f6f3",borderRadius:5,border:"1px solid #e8e5e0",textDecoration:"none",display:"block"}}>
                   {lk.label && <div style={{fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,color:"#555",marginBottom:2}}>🔗 {lk.label}</div>}
                   <div style={{fontSize:11,fontFamily:"'DM Sans',sans-serif",color:"#8b6508",wordBreak:"break-all",lineHeight:1.4}}>{lk.url}</div>
                 </a>)}</div>
               </div>}
               {e.category && <div style={{paddingTop:8,borderTop:"1px solid #f0ede8",marginBottom:6}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:3}}>Feeds</div>
+                <div style={{fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:"#444",fontWeight:800,marginBottom:3}}>Feeds</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4}}>{(C2N[e.category]||[]).map(nid=>{const nd=NODES.find(n=>n.id===nid);return nd?<span key={nid} style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",padding:"2px 7px",background:"#f7f5f2",borderRadius:3,color:"#888",border:"1px solid #eee"}}>{nd.label}</span>:null;})}</div>
               </div>}
               {admin&&<div style={{display:"flex",gap:14,marginTop:8,paddingTop:8,borderTop:"1px solid #f0ede8"}}>
