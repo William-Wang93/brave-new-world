@@ -89,7 +89,7 @@ function RichText({ text, style: s, hlTerm }) {
       {segments.map((seg, i) => {
         if (seg.type === "bold") return <strong key={i}>{applyHl(seg.text)}</strong>;
         if (seg.type === "italic") return <em key={i}>{applyHl(seg.text)}</em>;
-        if (seg.type === "link") return <a key={i} href={seg.url} target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>{applyHl(seg.text)}</a>;
+        if (seg.type === "link") return <a key={i} href={normalizeUrl(seg.url)} target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>{applyHl(seg.text)}</a>;
         return <span key={i}>{applyHl(seg.text)}</span>;
       })}
     </span>
@@ -113,7 +113,7 @@ function entryWeight(e) {
   const connText = getTextFromBlocks(e.connectionBlocks || e.careerConnection);
   if (insightText.length > 200) w += 1;
   if (connText.length > 20) w += 1;
-  const hasAttach = (e.pdfs && e.pdfs.length > 0) || (e.links && e.links.length > 0) || blocksHaveImage(e.insightBlocks) || blocksHaveImage(e.connectionBlocks);
+  const hasAttach = (e.pdfs && e.pdfs.length > 0) || (e.sources && e.sources.some(s => s.url)) || (e.links && e.links.length > 0) || blocksHaveImage(e.insightBlocks) || blocksHaveImage(e.connectionBlocks);
   if (hasAttach) w += 1;
   return w;
 }
@@ -890,13 +890,6 @@ function Form({onSave,onCancel,xpData,initial}){
           <button onClick={()=>fileRef.current?.click()} disabled={uploading} style={{width:100,height:128,borderRadius:4,border:"2px dashed #ccc",background:"none",cursor:"pointer",color:"#aaa",fontSize:12,fontFamily:"'DM Sans',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}>{uploading?"...":<><span style={{fontSize:24}}>+</span>Upload</>}</button>
           <input ref={fileRef} type="file" accept=".pdf" multiple style={{display:"none"}} onChange={handleFiles}/>
         </div>
-        <label style={S.lb}>Links</label>
-        {links.map((lk,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:12,fontFamily:"'DM Sans',sans-serif",padding:"4px 10px",background:"#f0ede8",borderRadius:4,color:"#555",border:"1px solid #e0ddd6"}}>🔗 {lk.label||lk.url.slice(0,40)}</span><button onClick={()=>setLinks(p=>p.filter((_,j)=>j!==i))} style={{background:"none",border:"none",color:"#c44",fontSize:14,cursor:"pointer"}}>✕</button></div>)}
-        <div style={{display:"flex",gap:6,alignItems:"center"}}>
-          <input style={{...S.inp,flex:1}} value={nUrl} onChange={e=>setNUrl(e.target.value)} placeholder="https://..." onKeyDown={e=>e.key==="Enter"&&(e.preventDefault(),addUrl())}/>
-          <input style={{...S.inp,width:100}} value={nLbl} onChange={e=>setNLbl(e.target.value)} placeholder="Label" onKeyDown={e=>e.key==="Enter"&&(e.preventDefault(),addUrl())}/>
-          <button onClick={addUrl} disabled={!nUrl.trim()} style={{width:32,height:38,background:"#1a1a1a",color:"#fff",border:"none",borderRadius:4,fontSize:18,cursor:"pointer",opacity:nUrl.trim()?1:0.3}}>+</button>
-        </div>
         <label style={S.lb}>Category → Skill Nodes</label>
         <select style={{...S.inp,background:"#fff"}} value={cat} onChange={e=>setCat(e.target.value)}>
           {CATS.map(c => {
@@ -1111,17 +1104,6 @@ export default function App(){
               <div style={secWrap("#5a4a3a")}>
                 <div style={secLabel("#5a4a3a")}>Attachments</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:10}}>{e.pdfs.map((p,i)=><PdfThumb key={i} pdf={p} isAdmin={admin}/>)}</div>
-              </div>}
-
-              {e.links && e.links.length > 0 &&
-              <div style={secWrap("#1a4a7a")}>
-                <div style={secLabel("#1a4a7a")}>Links</div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                  {e.links.map((lk,i)=><a key={i} href={normalizeUrl(lk.url)} target="_blank" rel="noopener noreferrer" style={{padding:"6px 10px",background:"#f8f6f3",borderRadius:4,border:"1px solid #e8e5e0",textDecoration:"none",display:"block"}}>
-                    {lk.label && <div style={{fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,color:"#555",marginBottom:2}}>🔗 {lk.label}</div>}
-                    <div style={{fontSize:11,fontFamily:"'DM Sans',sans-serif",color:"#8b6508",wordBreak:"break-all",lineHeight:1.4}}>{lk.url}</div>
-                  </a>)}
-                </div>
               </div>}
 
               <div style={secWrap("#2a6e4e")}>
