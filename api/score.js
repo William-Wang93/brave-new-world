@@ -1,4 +1,4 @@
-const https = require('https');
+import https from 'https';
 
 function callClaude(apiKey, prompt) {
   return new Promise((resolve, reject) => {
@@ -25,7 +25,7 @@ function callClaude(apiKey, prompt) {
       res.on('data', (chunk) => { data += chunk; });
       res.on('end', () => {
         if (res.statusCode !== 200) {
-          reject(new Error(`API returned ${res.statusCode}: ${data}`));
+          reject(new Error('API returned ' + res.statusCode + ': ' + data));
         } else {
           resolve(JSON.parse(data));
         }
@@ -38,7 +38,7 @@ function callClaude(apiKey, prompt) {
   });
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -57,9 +57,29 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ score: 1, reasoning: 'No insight text', error: true });
   }
 
-  const sourceList = (sources || []).map(function(s) { return s.name; }).filter(Boolean).join(', ');
+  const sourceList = (sources || []).map(s => s.name).filter(Boolean).join(', ');
 
-  const prompt = 'You are evaluating a learning journal entry from a finance professional building toward a CFO role. Score the depth of understanding on a scale of 1-5.\n\nSCORING RUBRIC:\n1 = Surface-level: Just a note that something was read/heard. No original thinking.\n2 = Descriptive: Summarizes but does not demonstrate understanding.\n3 = Analytical: Shows genuine engagement. Makes connections, identifies implications.\n4 = Synthesized: Connects to other domains or real decisions. Pattern recognition.\n5 = Applied: Changes a decision or framework. Original thinking.\n\nENTRY:\nTitle: ' + (title || 'Untitled') + '\nCategory: ' + (category || 'Uncategorized') + '\nSources: ' + (sourceList || 'None') + '\n\nKey Insight:\n' + insight + '\n\n' + (careerConnection ? 'Career Connection:\n' + careerConnection : '') + '\n\nRespond with ONLY a JSON object, no markdown, no backticks:\n{"score": <1-5>, "reasoning": "<one sentence>"}';
+  const prompt = `You are evaluating a learning journal entry from a finance professional building toward a CFO role. Score the depth of understanding on a scale of 1-5.
+
+SCORING RUBRIC:
+1 = Surface-level: Just a note that something was read/heard. No original thinking.
+2 = Descriptive: Summarizes but does not demonstrate understanding.
+3 = Analytical: Shows genuine engagement. Makes connections, identifies implications.
+4 = Synthesized: Connects to other domains or real decisions. Pattern recognition.
+5 = Applied: Changes a decision or framework. Original thinking.
+
+ENTRY:
+Title: ${title || 'Untitled'}
+Category: ${category || 'Uncategorized'}
+Sources: ${sourceList || 'None'}
+
+Key Insight:
+${insight}
+
+${careerConnection ? 'Career Connection:\n' + careerConnection : ''}
+
+Respond with ONLY a JSON object, no markdown, no backticks:
+{"score": <1-5>, "reasoning": "<one sentence>"}`;
 
   try {
     const data = await callClaude(apiKey, prompt);
@@ -80,4 +100,4 @@ module.exports = async function handler(req, res) {
     console.error('Claude API error:', err.message);
     return res.status(200).json({ score: 1, reasoning: 'Scoring service unavailable', error: true });
   }
-};
+}
