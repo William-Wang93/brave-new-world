@@ -138,7 +138,7 @@ function calcXP(entries, completedMilestones) {
 }
 
 // ─── POPOVER ───
-function Popover({ node, xpVal, rawVal, entries, isAvail, hasMilestone, completedMs, onToggleMs, pos, onClose, admin }) {
+function Popover({ node, xpVal, rawVal, entries, isAvail, hasMilestone, completedMs, onToggleMs, pos, onClose, admin, onNavigateEntry }) {
   const ref = useRef(null);
   const xpMet = (xpVal||0) >= node.xp;
   const msMet = hasMilestone;
@@ -198,7 +198,7 @@ function Popover({ node, xpVal, rawVal, entries, isAvail, hasMilestone, complete
         {/* Recent entries */}
         {rel.length>0&&<div style={{borderTop:"1px solid #eee",paddingTop:6,marginTop:6}}>
           <div style={{fontSize:9,textTransform:"uppercase",color:"#bbb",marginBottom:4}}>Recent</div>
-          {rel.slice(0,3).map(e=><div key={e.id} style={{fontSize:10,color:"#777",marginBottom:3,lineHeight:1.35}}>{e.insight.slice(0,70)}{e.insight.length>70?"...":""}</div>)}
+          {rel.slice(0,3).map(e=><div key={e.id} onClick={()=>{if(onNavigateEntry)onNavigateEntry(e.id);}} style={{fontSize:10,color:"#4a7ab5",marginBottom:3,lineHeight:1.35,cursor:"pointer",textDecoration:"underline"}}>{e.title || e.insight?.slice(0,70)}{(!e.title && e.insight?.length>70)?"...":""}</div>)}
           {rel.length>3&&<div style={{fontSize:9,color:"#ccc",fontStyle:"italic"}}>+{rel.length-3} more</div>}
         </div>}
       </div>
@@ -207,7 +207,7 @@ function Popover({ node, xpVal, rawVal, entries, isAvail, hasMilestone, complete
 }
 
 // ─── TREE SVG ───
-function Tree({ xp, raw, sel, onSel, entries, av, hasMilestone, completedMs, onToggleMs, admin }) {
+function Tree({ xp, raw, sel, onSel, entries, av, hasMilestone, completedMs, onToggleMs, admin, onNavigateEntry }) {
   const W=600,H=520,cW=W/6,rH=H/5.2,nR=24;
   const gp=n=>({x:20+n.col*cW,y:36+n.row*rH});
   const pr=id=>{const n=NODES.find(x=>x.id===id);return n?Math.min(1,(xp[id]||0)/n.xp):0;};
@@ -241,7 +241,7 @@ function Tree({ xp, raw, sel, onSel, entries, av, hasMilestone, completedMs, onT
         <text x={pp.x} y={pp.y+r+14} textAnchor="middle" dominantBaseline="central" fontSize={n.t>=4?11:9} fontWeight={n.t>=3?700:600} fill={done?"#1a1a1a":"#888"} fontFamily="'DM Sans',sans-serif" style={{pointerEvents:"none"}}>{n.label}</text>
       </g>;
     })}
-    {sn&&<Popover node={sn} xpVal={xp[sn.id]} rawVal={raw[sn.id]} entries={entries} isAvail={av(sn.id)} hasMilestone={hasMilestone(sn.id)} completedMs={completedMs[sn.id]} onToggleMs={onToggleMs} pos={gp(sn)} onClose={()=>onSel(null)} admin={admin}/>}
+    {sn&&<Popover node={sn} xpVal={xp[sn.id]} rawVal={raw[sn.id]} entries={entries} isAvail={av(sn.id)} hasMilestone={hasMilestone(sn.id)} completedMs={completedMs[sn.id]} onToggleMs={onToggleMs} pos={gp(sn)} onClose={()=>onSel(null)} admin={admin} onNavigateEntry={onNavigateEntry}/>}
   </svg>;
 }
 
@@ -822,6 +822,7 @@ function SignalForm({ onSave, onCancel, initial }) {
 // ─── FORM ───
 function Form({onSave,onCancel,xpData,initial}){
   const {xp,raw}=xpData;
+  const [title, setTitle] = useState(initial?.title || "");
   // Multiple sources: array of {name, url}
   const initSources = initial?.sources || (initial?.source ? [{name: initial.source, url: ""}] : []);
   const [sources, setSources] = useState(initSources);
@@ -862,6 +863,8 @@ function Form({onSave,onCancel,xpData,initial}){
         <button onClick={onCancel} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#999"}}>✕</button>
       </div>
       <div style={{padding:"16px 22px",display:"flex",flexDirection:"column",gap:10}}>
+        <label style={S.lb}>Title *</label>
+        <input style={{...S.inp,fontSize:16,fontWeight:600,fontFamily:"'Newsreader',Georgia,serif"}} value={title} onChange={e=>setTitle(e.target.value)} placeholder="What is this learning about?" />
         <label style={S.lb}>Sources</label>
         {sources.map((src, i) => (
           <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
@@ -913,7 +916,7 @@ function Form({onSave,onCancel,xpData,initial}){
       </div>
       <div style={{display:"flex",justifyContent:"flex-end",gap:10,padding:"0 22px 18px"}}>
         <button onClick={onCancel} style={{background:"transparent",border:"1px solid #ddd",padding:"10px 18px",fontSize:13,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",borderRadius:4,color:"#666"}}>Cancel</button>
-        <button onClick={()=>{if(!hasInsight)return;onSave({id:initial?.id||gid(),sources,source:sources.map(s=>s.name).join(", "),insightBlocks,connectionBlocks,insight:insightText,careerConnection:connText,category:cat,links,pdfs,date:initial?.date||new Date().toISOString()});}} disabled={!hasInsight} style={{background:"#1a1a1a",color:"#fff",border:"none",padding:"10px 22px",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",borderRadius:4,opacity:hasInsight?1:0.4}}>{initial?"Update":"Save"}</button>
+        <button onClick={()=>{if(!hasInsight||!title.trim())return;onSave({id:initial?.id||gid(),title:title.trim(),sources,source:sources.map(s=>s.name).join(", "),insightBlocks,connectionBlocks,insight:insightText,careerConnection:connText,category:cat,links,pdfs,date:initial?.date||new Date().toISOString()});}} disabled={!hasInsight||!title.trim()} style={{background:"#1a1a1a",color:"#fff",border:"none",padding:"10px 22px",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",borderRadius:4,opacity:(hasInsight&&title.trim())?1:0.4}}>{initial?"Update":"Save"}</button>
       </div>
     </div>
   </div>;
@@ -962,6 +965,7 @@ export default function App(){
     const notes = sigs.map(s => s.note).filter(Boolean);
     const allText = [...quotes.map(q => `> ${q}`), ...notes].join("\n\n");
     const prefill = {
+      title: sigs.length === 1 ? sigs[0].title : "",
       sources,
       source: sources.map(s => s.name).join(", "),
       insightBlocks: [{ type: "text", content: allText }],
@@ -1020,7 +1024,7 @@ export default function App(){
         {admin&&tab==="archive"&&<button onClick={()=>{setEditEntry(null);setShowForm(true);}} style={{marginLeft:"auto",background:"#1a1a1a",color:"#fff",border:"none",padding:"8px 16px",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",borderRadius:4}}>+ Entry</button>}
       </div>
 
-      {tab==="tree"&&<Tree xp={xp} raw={raw} sel={sel} onSel={setSel} entries={entries} av={av} hasMilestone={hasMilestone} completedMs={completedMs} onToggleMs={toggleMs} admin={admin}/>}
+      {tab==="tree"&&<Tree xp={xp} raw={raw} sel={sel} onSel={setSel} entries={entries} av={av} hasMilestone={hasMilestone} completedMs={completedMs} onToggleMs={toggleMs} admin={admin} onNavigateEntry={(entryId)=>{setSel(null);setTab("archive");setTimeout(()=>{const el=document.getElementById(`entry-${entryId}`);if(el){el.scrollIntoView({behavior:"smooth",block:"center"});el.style.boxShadow="0 0 0 3px #2a6e4e";setTimeout(()=>{el.style.boxShadow="none";},2000);}},100);}}/>}
 
       {tab==="archive"&&(()=>{
         const q = search.trim().toLowerCase();
@@ -1072,7 +1076,8 @@ export default function App(){
             {archiveNode!=="All" && ` in ${NODES.find(n=>n.id===archiveNode)?.label}`}
           </div>
           {filtered.length===0 ? <p style={{textAlign:"center",color:"#aaa",padding:"40px 0",fontFamily:"'DM Sans',sans-serif"}}>{q?"No matching entries.":"No entries yet."}</p>
-            : filtered.map(e => {const w=entryWeight(e); const insightText=getTextFromBlocks(e.insightBlocks||e.insight); const connText=getTextFromBlocks(e.connectionBlocks||e.careerConnection); return (<div key={e.id} style={{background:"#fff",border:"1px solid #e5e2dc",borderRadius:6,padding:"18px 22px"}}>
+            : filtered.map(e => {const w=entryWeight(e); const insightText=getTextFromBlocks(e.insightBlocks||e.insight); const connText=getTextFromBlocks(e.connectionBlocks||e.careerConnection); return (<div key={e.id} id={`entry-${e.id}`} style={{background:"#fff",border:"1px solid #e5e2dc",borderRadius:6,padding:"18px 22px"}}>
+              {e.title && <div style={{fontSize:18,fontWeight:700,fontFamily:"'Newsreader',Georgia,serif",marginBottom:8,lineHeight:1.3}}>{hl(e.title)}</div>}
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:6}}>
                 <span style={{fontSize:12,color:"#aaa",fontFamily:"'DM Sans',sans-serif"}}>{fd(e.date)}<span style={{marginLeft:6,color:(w>=3)?"#2a6e4e":"#bbb",fontWeight:600}}>{w}x XP</span></span>
                 <span style={{fontSize:11,color:"#777",fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",background:"#f3f1ee",padding:"2px 8px",borderRadius:3}}>{e.category}</span>
