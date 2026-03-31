@@ -998,8 +998,12 @@ export default function App(){
       }
     }
 
-    // Call Claude API for quality scoring (non-blocking — save even if scoring fails)
-    let scoredEntry = { ...entry };
+    // Save entry immediately (no waiting for AI scoring)
+    await saveEntry(entry);
+    setShowForm(false);
+    setEditEntry(null);
+
+    // Score async in background — updates the entry after scoring completes
     try {
       const insightText = getTextFromBlocks(entry.insightBlocks || entry.insight);
       const connText = getTextFromBlocks(entry.connectionBlocks || entry.careerConnection);
@@ -1015,17 +1019,15 @@ export default function App(){
         }),
       });
       if (res.ok) {
-        const { score, reasoning } = await res.json();
-        scoredEntry.ai_score = score;
-        scoredEntry.ai_reasoning = reasoning;
+        const { score, reasoning, error } = await res.json();
+        if (!error && score >= 1) {
+          // Update the entry with the score
+          await saveEntry({ ...entry, ai_score: score, ai_reasoning: reasoning });
+        }
       }
     } catch (e) {
-      console.error('Scoring failed:', e);
+      console.error('Scoring failed (entry saved without score):', e);
     }
-
-    await saveEntry(scoredEntry);
-    setShowForm(false);
-    setEditEntry(null);
   };
 
   const doAuth = async () => {
