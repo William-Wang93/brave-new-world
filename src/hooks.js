@@ -103,7 +103,19 @@ export function useSignals() {
     return { error };
   };
 
-  return { signals, loaded, add, remove, reload: load };
+  const update = async (signal) => {
+    const { data, error } = await supabase
+      .from('signals')
+      .upsert(signal, { onConflict: 'id' })
+      .select()
+      .single();
+    if (!error && data) {
+      setSignals(prev => prev.map(s => s.id === data.id ? data : s));
+    }
+    return { data, error };
+  };
+
+  return { signals, loaded, add, remove, update, reload: load };
 }
 
 // ─── MILESTONES ───

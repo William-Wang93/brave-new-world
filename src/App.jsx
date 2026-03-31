@@ -596,8 +596,9 @@ function FormattedArea({ value, onChange, placeholder, minHeight, style: s }) {
 }
 
 // ─── SIGNAL BOARD ───
-function SignalBoard({ signals, onAdd, onRemove, admin, onPromote }) {
+function SignalBoard({ signals, onAdd, onRemove, admin, onPromote, onEditSignal }) {
   const [showForm, setShowForm] = useState(false);
+  const [editSig, setEditSig] = useState(null);
   const [filterNode, setFilterNode] = useState("All");
   const [filterType, setFilterType] = useState("All");
   const [search, setSearch] = useState("");
@@ -686,16 +687,17 @@ function SignalBoard({ signals, onAdd, onRemove, admin, onPromote }) {
           {filtered.map(s => (
             <SignalCard key={s.id} signal={s} admin={admin} onRemove={() => onRemove(s.id)} searchTerm={q}
               isSelected={selected.has(s.id)} onSelect={() => toggleSelect(s.id)}
-              onPromoteSingle={() => onPromote([s])} />
+              onPromoteSingle={() => onPromote([s])}
+              onEdit={() => { setEditSig(s); setShowForm(true); }} />
           ))}
         </div>
       )}
-      {showForm && <SignalForm onSave={(sig) => { onAdd(sig); setShowForm(false); }} onCancel={() => setShowForm(false)} />}
+      {showForm && <SignalForm initial={editSig} onSave={(sig) => { if (editSig) { onEditSignal(sig); } else { onAdd(sig); } setShowForm(false); setEditSig(null); }} onCancel={() => { setShowForm(false); setEditSig(null); }} />}
     </div>
   );
 }
 
-function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect, onPromoteSingle }) {
+function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect, onPromoteSingle, onEdit }) {
   const [expanded, setExpanded] = useState(false);
   const typeInfo = SIG_TYPES.find(t => t.id === signal.type) || SIG_TYPES[0];
   const nodeNames = (signal.nodes || []).map(nid => NODES.find(n => n.id === nid)).filter(Boolean);
@@ -726,9 +728,9 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
           </div>
         )}
         {signal.url && expanded && (
-          <div style={{ fontSize: 11, color: "#8b6508", fontFamily: "'DM Sans',sans-serif", marginBottom: 6, wordBreak: "break-all" }}>
+          <a href={signal.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#8b6508", fontFamily: "'DM Sans',sans-serif", marginBottom: 6, wordBreak: "break-all", display: "block", textDecoration: "underline" }}>
             🔗 {signal.url.length > 50 ? signal.url.slice(0, 50) + "..." : signal.url}
-          </div>
+          </a>
         )}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center", marginTop: 8 }}>
           {nodeNames.map(n => {
@@ -739,6 +741,8 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
         </div>
         {admin && expanded && (
           <div style={{ marginTop: 8, display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <button onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              style={{ background: "none", border: "none", fontSize: 11, color: "#555", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textDecoration: "underline" }}>Edit</button>
             <button onClick={(e) => { e.stopPropagation(); onPromoteSingle(); }}
               style={{ background: "none", border: "none", fontSize: 11, color: "#2a6e4e", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textDecoration: "underline" }}>Promote →</button>
             <button onClick={(e) => { e.stopPropagation(); onRemove(); }}
@@ -750,14 +754,14 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
   );
 }
 
-function SignalForm({ onSave, onCancel }) {
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState("article");
-  const [source, setSource] = useState("");
-  const [url, setUrl] = useState("");
-  const [quote, setQuote] = useState("");
-  const [note, setNote] = useState("");
-  const [nodes, setNodes] = useState([]);
+function SignalForm({ onSave, onCancel, initial }) {
+  const [title, setTitle] = useState(initial?.title || "");
+  const [type, setType] = useState(initial?.type || "article");
+  const [source, setSource] = useState(initial?.source || "");
+  const [url, setUrl] = useState(initial?.url || "");
+  const [quote, setQuote] = useState(initial?.quote || "");
+  const [note, setNote] = useState(initial?.note || "");
+  const [nodes, setNodes] = useState(initial?.nodes || []);
   const toggleNode = (nid) => setNodes(prev => prev.includes(nid) ? prev.filter(x => x !== nid) : [...prev, nid]);
   const S = { lb: { fontSize: 11, fontFamily: "'DM Sans',sans-serif", textTransform: "uppercase", letterSpacing: ".06em", color: "#888", fontWeight: 600, marginTop: 12 }, inp: { padding: "10px 12px", border: "1px solid #ddd", borderRadius: 4, fontSize: 14, fontFamily: "'DM Sans',sans-serif", outline: "none", width: "100%", boxSizing: "border-box" } };
   return (
@@ -803,7 +807,7 @@ function SignalForm({ onSave, onCancel }) {
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "0 22px 18px" }}>
           <button onClick={onCancel} style={{ background: "transparent", border: "1px solid #ddd", padding: "10px 18px", fontSize: 13, fontFamily: "'DM Sans',sans-serif", cursor: "pointer", borderRadius: 4, color: "#666" }}>Cancel</button>
-          <button onClick={() => { if (!title.trim()) return; onSave({ id: gid(), title: title.trim(), type, source: source.trim(), url: url.trim(), quote: quote.trim(), note: note.trim(), nodes, date: new Date().toISOString() }); }} disabled={!title.trim()}
+          <button onClick={() => { if (!title.trim()) return; onSave({ id: initial?.id || gid(), title: title.trim(), type, source: source.trim(), url: url.trim(), quote: quote.trim(), note: note.trim(), nodes, date: initial?.date || new Date().toISOString() }); }} disabled={!title.trim()}
             style={{ background: "#1a1a1a", color: "#fff", border: "none", padding: "10px 22px", fontSize: 13, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, cursor: "pointer", borderRadius: 4, opacity: title.trim() ? 1 : 0.4 }}>Capture</button>
         </div>
       </div>
@@ -915,7 +919,7 @@ function Form({onSave,onCancel,xpData,initial}){
 export default function App(){
   const { user, loading: authLoading, signIn, signOut } = useAuth();
   const { entries, loaded: entriesLoaded, save: saveEntry, remove: removeEntry } = useEntries();
-  const { signals, loaded: signalsLoaded, add: addSignal, remove: removeSignal } = useSignals();
+  const { signals, loaded: signalsLoaded, add: addSignal, remove: removeSignal, update: updateSignal } = useSignals();
   const { completedMs, loaded: msLoaded, toggle: toggleMs } = useMilestones();
 
   const [sel,setSel]=useState(null);
@@ -1070,7 +1074,7 @@ export default function App(){
                 <span style={{fontSize:11,color:"#777",fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",background:"#f3f1ee",padding:"2px 8px",borderRadius:3}}>{e.category}</span>
               </div>
               {(e.sources?.length > 0 || e.source) && <div style={{marginBottom:10}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#bbb",fontWeight:600,marginBottom:3}}>Source{e.sources?.length > 1 ? "s" : ""}</div>
+                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:3}}>Source{e.sources?.length > 1 ? "s" : ""}</div>
                 {e.sources?.length > 0 ? e.sources.map((src, si) => (
                   <div key={si} style={{fontSize:13,color:"#888",fontFamily:"'DM Sans',sans-serif",fontStyle:"italic",marginBottom:3}}>
                     {src.url ? <a href={src.url} target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>{hl(src.name)}</a> : hl(src.name)}
@@ -1078,26 +1082,26 @@ export default function App(){
                 )) : <div style={{fontSize:13,color:"#888",fontFamily:"'DM Sans',sans-serif",fontStyle:"italic"}}>{hl(e.source)}</div>}
               </div>}
               <div style={{marginBottom:10}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#bbb",fontWeight:600,marginBottom:3}}>Key Insight</div>
+                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:3}}>Key Insight</div>
                 {renderBlocks(e.insightBlocks, e.insight, {fontSize:15,color:"#1a1a1a"})}
               </div>
               {connText.length > 0 && <div style={{marginBottom:10,paddingTop:10,borderTop:"1px solid #f0ede8"}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#bbb",fontWeight:600,marginBottom:3}}>Career Connection</div>
+                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:3}}>Career Connection</div>
                 {renderBlocks(e.connectionBlocks, e.careerConnection, {fontSize:14,color:"#555",fontFamily:"'DM Sans',sans-serif"})}
               </div>}
               {e.pdfs && e.pdfs.length > 0 && <div style={{marginBottom:10,paddingTop:10,borderTop:"1px solid #f0ede8"}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#bbb",fontWeight:600,marginBottom:6}}>Attachments</div>
+                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:6}}>Attachments</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:10}}>{e.pdfs.map((p,i)=><PdfThumb key={i} pdf={p} isAdmin={admin}/>)}</div>
               </div>}
               {e.links && e.links.length > 0 && <div style={{marginBottom:10,paddingTop:10,borderTop:"1px solid #f0ede8"}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#bbb",fontWeight:600,marginBottom:6}}>Links</div>
-                <div style={{display:"flex",flexDirection:"column",gap:6}}>{e.links.map((lk,i)=><div key={i} style={{padding:"8px 12px",background:"#f8f6f3",borderRadius:5,border:"1px solid #e8e5e0"}}>
+                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:6}}>Links</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>{e.links.map((lk,i)=><a key={i} href={lk.url} target="_blank" rel="noopener noreferrer" style={{padding:"8px 12px",background:"#f8f6f3",borderRadius:5,border:"1px solid #e8e5e0",textDecoration:"none",display:"block"}}>
                   {lk.label && <div style={{fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,color:"#555",marginBottom:2}}>🔗 {lk.label}</div>}
                   <div style={{fontSize:11,fontFamily:"'DM Sans',sans-serif",color:"#8b6508",wordBreak:"break-all",lineHeight:1.4}}>{lk.url}</div>
-                </div>)}</div>
+                </a>)}</div>
               </div>}
               {e.category && <div style={{paddingTop:8,borderTop:"1px solid #f0ede8",marginBottom:6}}>
-                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#bbb",fontWeight:600,marginBottom:3}}>Feeds</div>
+                <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#666",fontWeight:700,marginBottom:3}}>Feeds</div>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4}}>{(C2N[e.category]||[]).map(nid=>{const nd=NODES.find(n=>n.id===nid);return nd?<span key={nid} style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",padding:"2px 7px",background:"#f7f5f2",borderRadius:3,color:"#888",border:"1px solid #eee"}}>{nd.label}</span>:null;})}</div>
               </div>}
               {admin&&<div style={{display:"flex",gap:14,marginTop:8,paddingTop:8,borderTop:"1px solid #f0ede8"}}>
@@ -1108,7 +1112,7 @@ export default function App(){
         </div>);
       })()}
 
-      {tab==="signals"&&<SignalBoard signals={signals} onAdd={addSignal} onRemove={removeSignal} admin={admin} onPromote={promoteSignals}/>}
+      {tab==="signals"&&<SignalBoard signals={signals} onAdd={addSignal} onRemove={removeSignal} admin={admin} onPromote={promoteSignals} onEditSignal={updateSignal}/>}
 
       {tab==="stats"&&<StatsDashboard entries={entries} signals={signals} xpData={xpData} completedMs={completedMs}/>}
 
