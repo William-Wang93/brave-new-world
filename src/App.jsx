@@ -757,16 +757,27 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
   const secLabel=(color)=>({fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:color,fontWeight:800,marginBottom:4});
   const secWrap=(color)=>({borderLeft:`3px solid ${color}`,paddingLeft:14,marginBottom:12,borderRadius:0});
 
-  const renderParas = (text, term) => {
-    if (!text) return null;
-    const paras = text.split(/\n\n+/);
-    return paras.map((p, i) => {
-      if (!p.trim()) return null;
-      const lines = p.split(/\n/);
-      return (<p key={i} style={{fontSize:fullWidth?15:13,lineHeight:1.6,margin:"0 0 8px",color:"#1a1a1a"}}>
-        {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={term} /></span>))}
-      </p>);
-    });
+  const renderBlocks = (blocks, fallbackText, sectionStyle, hlTerm) => {
+    const renderText = (text, key) => {
+      if (!text) return null;
+      const paragraphs = text.split(/\n\n+/);
+      return paragraphs.map((para, pi) => {
+        if (!para.trim()) return null;
+        const lines = para.split(/\n/);
+        return (<p key={key + '-' + pi} style={{fontSize:sectionStyle?.fontSize||13,lineHeight:1.6,margin:"0 0 8px",color:sectionStyle?.color||"#1a1a1a",fontFamily:sectionStyle?.fontFamily||"inherit"}}>
+          {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={hlTerm} /></span>))}
+        </p>);
+      });
+    };
+    if (blocks && Array.isArray(blocks)) {
+      return blocks.map((block, i) => {
+        if (block.type === "text" && block.content) return renderText(block.content, i);
+        if (block.type === "image") return (<img key={i} src={block.data} alt={block.name||"image"} style={{width:"100%",maxHeight:400,objectFit:"contain",borderRadius:6,border:"1px solid #e5e2dc",marginBottom:8,display:"block",background:"#f8f6f3"}}/>);
+        return null;
+      });
+    }
+    if (fallbackText) return renderText(fallbackText, 'fb');
+    return null;
   };
 
   return (
@@ -785,17 +796,17 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
           </div>
         </div>
 
-        {signal.quote && (
+        {(signal.quote || signal.quoteBlocks) && (
           <div style={secWrap("#8b2500")}>
             <div style={secLabel("#8b2500")}>Key Quote</div>
-            {expanded ? renderParas(signal.quote, searchTerm) : <p style={{fontSize:13,color:"#666",fontStyle:"italic",margin:0,lineHeight:1.5}}><RichText text={signal.quote.length > 120 ? signal.quote.slice(0, 120) + "..." : signal.quote} hlTerm={searchTerm} /></p>}
+            {expanded ? renderBlocks(signal.quoteBlocks, signal.quote, {fontSize:fullWidth?15:13,color:"#1a1a1a"}, searchTerm) : <p style={{fontSize:13,color:"#666",fontStyle:"italic",margin:0,lineHeight:1.5}}><RichText text={(signal.quote||"").length > 120 ? (signal.quote||"").slice(0, 120) + "..." : signal.quote} hlTerm={searchTerm} /></p>}
           </div>
         )}
 
-        {signal.note && expanded && (
+        {(signal.note || signal.noteBlocks) && expanded && (
           <div style={secWrap("#1a4a7a")}>
             <div style={secLabel("#1a4a7a")}>Your Take</div>
-            {renderParas(signal.note, searchTerm)}
+            {renderBlocks(signal.noteBlocks, signal.note, {fontSize:fullWidth?15:13,color:"#555",fontFamily:"'DM Sans',sans-serif"}, searchTerm)}
           </div>
         )}
 
@@ -851,6 +862,10 @@ function SignalForm({ onSave, onCancel, initial }) {
   const [url, setUrl] = useState(initial?.url || "");
   const [quote, setQuote] = useState(initial?.quote || "");
   const [note, setNote] = useState(initial?.note || "");
+  const initQuoteBlocks = initial?.quoteBlocks || (initial?.quote ? [{type:"text",content:initial.quote}] : [{type:"text",content:""}]);
+  const initNoteBlocks = initial?.noteBlocks || (initial?.note ? [{type:"text",content:initial.note}] : [{type:"text",content:""}]);
+  const [quoteBlocks, setQuoteBlocks] = useState(initQuoteBlocks);
+  const [noteBlocks, setNoteBlocks] = useState(initNoteBlocks);
   const [nodes, setNodes] = useState(initial?.nodes || []);
   const [pdfs, setPdfs] = useState(initial?.pdfs || []);
   const [uploading, setUploading] = useState(false);
@@ -892,10 +907,10 @@ function SignalForm({ onSave, onCancel, initial }) {
           <input style={S.inp} value={source} onChange={e => setSource(e.target.value)} placeholder="Author, publication, podcast..." />
           <label style={S.lb}>URL (optional)</label>
           <input style={S.inp} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." />
-          <label style={S.lb}>Key Quote / Excerpt</label>
-          <FormattedArea style={{ ...S.inp, resize: "vertical" }} minHeight={70} value={quote} onChange={setQuote} placeholder="The line that made you stop scrolling..." />
-          <label style={S.lb}>Your Take (optional)</label>
-          <FormattedArea style={{ ...S.inp, resize: "vertical" }} minHeight={50} value={note} onChange={setNote} placeholder="Why does this matter? What does it connect to?" />
+          <label style={S.lb}>Key Quote / Excerpt <span style={{textTransform:"none",fontWeight:400,color:"#bbb"}}>(add text and images)</span></label>
+          <BlockEditor blocks={quoteBlocks} onChange={setQuoteBlocks} placeholder="The line that made you stop scrolling..." />
+          <label style={S.lb}>Your Take (optional) <span style={{textTransform:"none",fontWeight:400,color:"#bbb"}}>(add text and images)</span></label>
+          <BlockEditor blocks={noteBlocks} onChange={setNoteBlocks} placeholder="Why does this matter? What does it connect to?" />
           <label style={S.lb}>Attachments (PDFs, Excel)</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             {pdfs.map((p, i) => <FileThumbnail key={i} file={p} isAdmin onRemove={() => setPdfs(pr => pr.filter((_, j) => j !== i))} onUpdateCaption={(cap) => setPdfs(pr => { const n = [...pr]; n[i] = { ...n[i], caption: cap }; return n; })} />)}
@@ -918,7 +933,7 @@ function SignalForm({ onSave, onCancel, initial }) {
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "0 22px 18px" }}>
           <button onClick={onCancel} style={{ background: "transparent", border: "1px solid #ddd", padding: "10px 18px", fontSize: 13, fontFamily: "'DM Sans',sans-serif", cursor: "pointer", borderRadius: 4, color: "#666" }}>Cancel</button>
-          <button onClick={() => { if (!title.trim()) return; onSave({ id: initial?.id || gid(), title: title.trim(), type, source: source.trim(), url: url.trim(), quote: quote.trim(), note: note.trim(), nodes, pdfs, date: initial?.date || new Date().toISOString() }); }} disabled={!title.trim()}
+          <button onClick={() => { if (!title.trim()) return; const quoteText=getTextFromBlocks(quoteBlocks); const noteText=getTextFromBlocks(noteBlocks); onSave({ id: initial?.id || gid(), title: title.trim(), type, source: source.trim(), url: url.trim(), quote: quoteText, note: noteText, quoteBlocks, noteBlocks, nodes, pdfs, date: initial?.date || new Date().toISOString() }); }} disabled={!title.trim()}
             style={{ background: "#1a1a1a", color: "#fff", border: "none", padding: "10px 22px", fontSize: 13, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, cursor: "pointer", borderRadius: 4, opacity: title.trim() ? 1 : 0.4 }}>{initial ? "Update" : "Capture"}</button>
         </div>
       </div>
@@ -1339,6 +1354,9 @@ export default function App(){
             </p>
             <p style={{fontSize:15,margin:0}}>
               This app tracks my progression toward that standard, not through credentials or titles, but through demonstrated understanding logged in real time.
+            </p>
+            <p style={{fontSize:15,margin:"14px 0 0",color:"#555"}}>
+              You can learn more about me, William, by visiting my <a href="https://williamhwang.me/" target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>personal website</a> or connecting on <a href="https://www.linkedin.com/in/williamwang1963/" target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>LinkedIn</a>.
             </p>
           </div>
 
