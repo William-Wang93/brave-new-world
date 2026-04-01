@@ -1127,14 +1127,24 @@ export default function App(){
           );
         };
         const renderBlocks = (blocks, fallbackText, sectionStyle) => {
+          const renderText = (text, key) => {
+            const paragraphs = text.split(/\n\n+/);
+            return paragraphs.map((para, pi) => {
+              if (!para.trim()) return null;
+              const lines = para.split(/\n/);
+              return (<p key={key + '-' + pi} style={{fontSize:sectionStyle?.fontSize||15,lineHeight:1.6,margin:"0 0 10px",color:sectionStyle?.color||"#1a1a1a",fontFamily:sectionStyle?.fontFamily||"inherit"}}>
+                {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={q} /></span>))}
+              </p>);
+            });
+          };
           if (blocks && Array.isArray(blocks)) {
             return blocks.map((block, i) => {
-              if (block.type === "text" && block.content) return (<p key={i} style={{fontSize:sectionStyle?.fontSize||15,lineHeight:1.6,margin:"0 0 8px",color:sectionStyle?.color||"#1a1a1a",fontFamily:sectionStyle?.fontFamily||"inherit"}}><RichText text={block.content} hlTerm={q} /></p>);
+              if (block.type === "text" && block.content) return renderText(block.content, i);
               if (block.type === "image") return (<img key={i} src={block.data} alt={block.name||"image"} style={{width:"100%",maxHeight:400,objectFit:"contain",borderRadius:6,border:"1px solid #e5e2dc",marginBottom:8,display:"block",background:"#f8f6f3"}}/>);
               return null;
             });
           }
-          if (fallbackText) return (<p style={{fontSize:sectionStyle?.fontSize||15,lineHeight:1.6,margin:0,color:sectionStyle?.color||"#1a1a1a"}}><RichText text={fallbackText} hlTerm={q} /></p>);
+          if (fallbackText) return renderText(fallbackText, 'fb');
           return null;
         };
         return (<div style={{display:"flex",flexDirection:"column",gap:12}}>
