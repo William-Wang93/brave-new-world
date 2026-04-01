@@ -640,6 +640,7 @@ function SignalBoard({ signals, onAdd, onRemove, admin, onPromote, onEditSignal 
   const [filterType, setFilterType] = useState("All");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(new Set());
+  const [expandedId, setExpandedId] = useState(null);
   const selecting = selected.size > 0;
 
   const toggleSelect = (id) => {
@@ -720,22 +721,37 @@ function SignalBoard({ signals, onAdd, onRemove, admin, onPromote, onEditSignal 
           </p>
         </div>
       ) : (
-        <div style={{ columnCount: 2, columnGap: 12 }}>
-          {filtered.map(s => (
-            <SignalCard key={s.id} signal={s} admin={admin} onRemove={() => onRemove(s.id)} searchTerm={q}
-              isSelected={selected.has(s.id)} onSelect={() => toggleSelect(s.id)}
-              onPromoteSingle={() => onPromote([s])}
-              onEdit={() => { setEditSig(s); setShowForm(true); }} />
-          ))}
-        </div>
+        <>
+          {/* Expanded card rendered full-width above grid */}
+          {expandedId && (() => {
+            const s = filtered.find(x => x.id === expandedId);
+            if (!s) return null;
+            return <div style={{ marginBottom: 16 }}>
+              <SignalCard key={s.id} signal={s} admin={admin} onRemove={() => onRemove(s.id)} searchTerm={q}
+                isSelected={selected.has(s.id)} onSelect={() => toggleSelect(s.id)}
+                onPromoteSingle={() => onPromote([s])}
+                onEdit={() => { setEditSig(s); setShowForm(true); }}
+                expanded={true} onToggleExpand={() => setExpandedId(null)} fullWidth />
+            </div>;
+          })()}
+          {/* Column grid with non-expanded cards */}
+          <div style={{ columnCount: 2, columnGap: 12 }}>
+            {filtered.filter(s => s.id !== expandedId).map(s => (
+              <SignalCard key={s.id} signal={s} admin={admin} onRemove={() => onRemove(s.id)} searchTerm={q}
+                isSelected={selected.has(s.id)} onSelect={() => toggleSelect(s.id)}
+                onPromoteSingle={() => onPromote([s])}
+                onEdit={() => { setEditSig(s); setShowForm(true); }}
+                expanded={false} onToggleExpand={() => setExpandedId(s.id)} />
+            ))}
+          </div>
+        </>
       )}
       {showForm && <SignalForm initial={editSig} onSave={(sig) => { if (editSig) { onEditSignal(sig); } else { onAdd(sig); } setShowForm(false); setEditSig(null); }} onCancel={() => { setShowForm(false); setEditSig(null); }} />}
     </div>
   );
 }
 
-function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect, onPromoteSingle, onEdit }) {
-  const [expanded, setExpanded] = useState(false);
+function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect, onPromoteSingle, onEdit, expanded, onToggleExpand, fullWidth }) {
   const typeInfo = SIG_TYPES.find(t => t.id === signal.type) || SIG_TYPES[0];
   const nodeNames = (signal.nodes || []).map(nid => NODES.find(n => n.id === nid)).filter(Boolean);
   const secLabel=(color)=>({fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:color,fontWeight:800,marginBottom:4});
@@ -747,15 +763,15 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
     return paras.map((p, i) => {
       if (!p.trim()) return null;
       const lines = p.split(/\n/);
-      return (<p key={i} style={{fontSize:13,lineHeight:1.6,margin:"0 0 8px",color:"#1a1a1a"}}>
+      return (<p key={i} style={{fontSize:fullWidth?15:13,lineHeight:1.6,margin:"0 0 8px",color:"#1a1a1a"}}>
         {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={term} /></span>))}
       </p>);
     });
   };
 
   return (
-    <div style={{ breakInside: "avoid", marginBottom: 12, background: isSelected ? "#f0faf5" : "#fff", border: isSelected ? "2px solid #2a6e4e" : "1px solid #e5e2dc", borderRadius: 8, overflow: "hidden", cursor: "pointer", transition: "all .15s" }}
-      onClick={() => setExpanded(!expanded)}
+    <div style={{ breakInside: "avoid", marginBottom: fullWidth ? 0 : 12, background: isSelected ? "#f0faf5" : "#fff", border: isSelected ? "2px solid #2a6e4e" : "1px solid #e5e2dc", borderRadius: 8, overflow: "hidden", cursor: "pointer", transition: "all .15s" }}
+      onClick={onToggleExpand}
       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,.08)"; }}
       onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
       <div style={{ height: 3, background: typeInfo.color }} />
@@ -764,7 +780,7 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
           {admin && <span onClick={(e) => { e.stopPropagation(); onSelect(); }} style={{ width: 16, height: 16, borderRadius: 3, border: isSelected ? "none" : "1.5px solid #ccc", background: isSelected ? "#2a6e4e" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: "#fff", marginTop: 2, cursor: "pointer" }}>{isSelected ? "✓" : ""}</span>}
           <span style={{ fontSize: 16, lineHeight: 1 }}>{typeInfo.icon}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Newsreader',Georgia,serif", lineHeight: 1.3 }}><Highlight text={signal.title} term={searchTerm} /></div>
+            <div style={{ fontSize: fullWidth ? 20 : 15, fontWeight: 700, fontFamily: "'Newsreader',Georgia,serif", lineHeight: 1.3 }}><Highlight text={signal.title} term={searchTerm} /></div>
             <div style={{ fontSize: 11, color: "#aaa", fontFamily: "'DM Sans',sans-serif", marginTop: 3 }}>{fmtRelative(signal.date)}</div>
           </div>
         </div>
