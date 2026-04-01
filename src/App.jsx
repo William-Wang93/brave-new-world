@@ -293,19 +293,21 @@ function FileThumbnail({file, onRemove, onUpdateCaption, isAdmin}){
 // ─── BLOCK EDITOR ───
 function BlockEditor({ blocks, onChange, placeholder, label, autoFocus }) {
   const imgRef = useRef(null);
+  const insertAt = useRef(null);
   const textRefs = useRef({});
-  const addText = () => onChange([...blocks, { type: "text", content: "" }]);
-  const addImage = async (e) => {
+  const addTextAt = (pos) => { const n = [...blocks]; n.splice(pos, 0, { type: "text", content: "" }); onChange(n); };
+  const addImageAt = async (e, pos) => {
     const files = Array.from(e.target.files || []);
     for (const file of files) {
       if (!file.type.startsWith("image/")) continue;
       if (file.size > 3 * 1024 * 1024) { alert("Max ~3MB per image"); continue; }
       const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
-      onChange([...blocks, { type: "image", data, name: file.name }]);
+      const n = [...blocks]; n.splice(pos, 0, { type: "image", data, name: file.name, caption: "" }); onChange(n);
     }
     if (imgRef.current) imgRef.current.value = "";
   };
   const updateBlock = (i, val) => { const n = [...blocks]; n[i] = { ...n[i], content: val }; onChange(n); };
+  const updateCaption = (i, val) => { const n = [...blocks]; n[i] = { ...n[i], caption: val }; onChange(n); };
   const removeBlock = (i) => onChange(blocks.filter((_, j) => j !== i));
 
   const wrapSelection = (i, before, after) => {
@@ -334,9 +336,16 @@ function BlockEditor({ blocks, onChange, placeholder, label, autoFocus }) {
   };
 
   const tbtn = { background: "none", border: "1px solid #ddd", borderRadius: 3, padding: "2px 7px", cursor: "pointer", fontSize: 12, fontFamily: "'DM Sans',sans-serif", color: "#666", lineHeight: 1 };
+  const insertBtns = (pos) => (
+    <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+      <button onClick={() => addTextAt(pos)} style={{ padding: "3px 8px", border: "1px dashed #ccc", borderRadius: 4, background: "none", cursor: "pointer", fontSize: 10, fontFamily: "'DM Sans',sans-serif", color: "#bbb" }}>+ Text</button>
+      <button onClick={() => { insertAt.current = pos; imgRef.current?.click(); }} style={{ padding: "3px 8px", border: "1px dashed #ccc", borderRadius: 4, background: "none", cursor: "pointer", fontSize: 10, fontFamily: "'DM Sans',sans-serif", color: "#bbb" }}>🖼 Image</button>
+    </div>
+  );
 
   return (
     <div>
+      {blocks.length > 0 && blocks[0].type !== "text" && insertBtns(0)}
       {blocks.map((block, i) => (
         <div key={i} style={{ position: "relative", marginBottom: 6 }}>
           {block.type === "text" ? (
@@ -356,8 +365,10 @@ function BlockEditor({ blocks, onChange, placeholder, label, autoFocus }) {
               />
             </div>
           ) : (
-            <div style={{ position: "relative", borderRadius: 6, overflow: "hidden", border: "1px solid #e5e2dc" }}>
+            <div style={{ borderRadius: 6, overflow: "hidden", border: "1px solid #e5e2dc" }}>
               <img src={block.data} alt={block.name || "image"} style={{ width: "100%", maxHeight: 300, objectFit: "contain", display: "block", background: "#f8f6f3" }} />
+              <input value={block.caption || ""} onChange={e => updateCaption(i, e.target.value)} placeholder="Add caption..."
+                style={{ width: "100%", padding: "6px 10px", border: "none", borderTop: "1px solid #e5e2dc", fontSize: 12, fontFamily: "'DM Sans',sans-serif", fontStyle: "italic", color: "#666", outline: "none", boxSizing: "border-box", background: "#faf8f5" }} />
             </div>
           )}
           {(blocks.length > 1 || block.type === "image") && (
@@ -366,9 +377,9 @@ function BlockEditor({ blocks, onChange, placeholder, label, autoFocus }) {
         </div>
       ))}
       <div style={{ display: "flex", gap: 6 }}>
-        <button onClick={addText} style={{ padding: "4px 10px", border: "1px dashed #ccc", borderRadius: 4, background: "none", cursor: "pointer", fontSize: 11, fontFamily: "'DM Sans',sans-serif", color: "#999" }}>+ Text</button>
-        <button onClick={() => imgRef.current?.click()} style={{ padding: "4px 10px", border: "1px dashed #ccc", borderRadius: 4, background: "none", cursor: "pointer", fontSize: 11, fontFamily: "'DM Sans',sans-serif", color: "#999" }}>🖼 Image</button>
-        <input ref={imgRef} type="file" accept="image/*" style={{ display: "none" }} onChange={addImage} />
+        <button onClick={() => addTextAt(blocks.length)} style={{ padding: "4px 10px", border: "1px dashed #ccc", borderRadius: 4, background: "none", cursor: "pointer", fontSize: 11, fontFamily: "'DM Sans',sans-serif", color: "#999" }}>+ Text</button>
+        <button onClick={() => { insertAt.current = blocks.length; imgRef.current?.click(); }} style={{ padding: "4px 10px", border: "1px dashed #ccc", borderRadius: 4, background: "none", cursor: "pointer", fontSize: 11, fontFamily: "'DM Sans',sans-serif", color: "#999" }}>🖼 Image</button>
+        <input ref={imgRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => addImageAt(e, insertAt.current !== null ? insertAt.current : blocks.length)} />
       </div>
     </div>
   );
@@ -772,7 +783,7 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
     if (blocks && Array.isArray(blocks)) {
       return blocks.map((block, i) => {
         if (block.type === "text" && block.content) return renderText(block.content, i);
-        if (block.type === "image") return (<img key={i} src={block.data} alt={block.name||"image"} style={{width:"100%",maxHeight:400,objectFit:"contain",borderRadius:6,border:"1px solid #e5e2dc",marginBottom:8,display:"block",background:"#f8f6f3"}}/>);
+        if (block.type === "image") return (<div key={i} style={{marginBottom:10}}><img src={block.data} alt={block.name||"image"} style={{width:"100%",maxHeight:400,objectFit:"contain",borderRadius:6,border:"1px solid #e5e2dc",display:"block",background:"#f8f6f3"}}/>{block.caption && <div style={{fontSize:12,fontFamily:"'DM Sans',sans-serif",fontStyle:"italic",color:"#888",marginTop:4,textAlign:"center"}}>{block.caption}</div>}</div>);
         return null;
       });
     }
@@ -1260,7 +1271,7 @@ export default function App(){
           if (blocks && Array.isArray(blocks)) {
             return blocks.map((block, i) => {
               if (block.type === "text" && block.content) return renderText(block.content, i);
-              if (block.type === "image") return (<img key={i} src={block.data} alt={block.name||"image"} style={{width:"100%",maxHeight:400,objectFit:"contain",borderRadius:6,border:"1px solid #e5e2dc",marginBottom:8,display:"block",background:"#f8f6f3"}}/>);
+              if (block.type === "image") return (<div key={i} style={{marginBottom:10}}><img src={block.data} alt={block.name||"image"} style={{width:"100%",maxHeight:400,objectFit:"contain",borderRadius:6,border:"1px solid #e5e2dc",display:"block",background:"#f8f6f3"}}/>{block.caption && <div style={{fontSize:12,fontFamily:"'DM Sans',sans-serif",fontStyle:"italic",color:"#888",marginTop:4,textAlign:"center"}}>{block.caption}</div>}</div>);
               return null;
             });
           }
