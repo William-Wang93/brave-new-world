@@ -857,7 +857,7 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
               style={{ background: "none", border: "none", fontSize: 11, color: "#555", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textDecoration: "underline" }}>Edit</button>
             <button onClick={(e) => { e.stopPropagation(); onPromoteSingle(); }}
               style={{ background: "none", border: "none", fontSize: 11, color: "#2a6e4e", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textDecoration: "underline" }}>Promote →</button>
-            <button onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            <button onClick={(e) => { e.stopPropagation(); if(window.confirm("Are you sure you want to remove this signal? This cannot be undone."))onRemove(); }}
               style={{ background: "none", border: "none", fontSize: 11, color: "#c44", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textDecoration: "underline" }}>Remove</button>
           </div>
         )}
@@ -1343,7 +1343,7 @@ export default function App(){
 
               {admin&&<div style={{display:"flex",gap:14,paddingTop:10,borderTop:"1px solid #f0ede8"}}>
                 <button onClick={()=>{setEditEntry(e);setShowForm(true);}} style={{background:"none",border:"none",color:"#555",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",textDecoration:"underline"}}>Edit</button>
-                <button onClick={()=>removeEntry(e.id)} style={{background:"none",border:"none",color:"#c44",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",textDecoration:"underline"}}>Remove</button>
+                <button onClick={()=>{if(window.confirm("Are you sure you want to remove this entry? This cannot be undone."))removeEntry(e.id);}} style={{background:"none",border:"none",color:"#c44",fontSize:12,fontFamily:"'DM Sans',sans-serif",cursor:"pointer",textDecoration:"underline"}}>Remove</button>
               </div>}
             </div>);})}
         </div>);
