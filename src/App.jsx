@@ -248,13 +248,29 @@ function Tree({ xp, raw, sel, onSel, entries, av, hasMilestone, completedMs, onT
 }
 
 // ─── PDF THUMB ───
-function PdfThumb({pdf,onRemove,isAdmin}){
-  return <div style={{position:"relative",display:"inline-flex",flexDirection:"column",alignItems:"center",width:100}}>
-    <div style={{width:100,height:128,borderRadius:4,border:"1px solid #ddd",background:"#fff",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"relative"}}>
-      <div style={{fontSize:32,marginBottom:4}}>📄</div>
-      <div style={{fontSize:9,fontFamily:"'DM Sans',sans-serif",color:"#888",textAlign:"center",padding:"0 6px",lineHeight:1.3}}>{pdf.name?.slice(0,25)||"PDF"}</div>
-      {pdf.size&&<div style={{fontSize:8,color:"#bbb",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>{fsize(pdf.size)}</div>}
-      <div style={{position:"absolute",top:4,right:4,background:"#e74c3c",color:"#fff",fontSize:8,fontFamily:"'DM Sans',sans-serif",padding:"1px 5px",borderRadius:2,fontWeight:700}}>PDF</div>
+function FileThumbnail({file, onRemove, onUpdateCaption, isAdmin}){
+  const ext = (file.name||"").split('.').pop().toLowerCase();
+  const isPdf = ext === 'pdf';
+  const isExcel = ['xlsx','xls','xlsm','csv'].includes(ext);
+  const icon = isPdf ? "📄" : isExcel ? "📊" : "📎";
+  const badge = isPdf ? "PDF" : isExcel ? ext.toUpperCase() : "FILE";
+  const badgeColor = isPdf ? "#e74c3c" : isExcel ? "#217346" : "#666";
+  return <div style={{position:"relative",display:"inline-flex",flexDirection:"column",width:140}}>
+    <div style={{borderRadius:4,border:"1px solid #ddd",background:"#fff",padding:10,position:"relative"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+        <span style={{fontSize:24}}>{icon}</span>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",color:"#555",lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{file.name?.slice(0,30)||"File"}</div>
+          {file.size&&<div style={{fontSize:8,color:"#bbb",fontFamily:"'DM Sans',sans-serif"}}>{fsize(file.size)}</div>}
+        </div>
+        <span style={{fontSize:8,fontFamily:"'DM Sans',sans-serif",padding:"1px 5px",borderRadius:2,fontWeight:700,background:badgeColor,color:"#fff"}}>{badge}</span>
+      </div>
+      {isAdmin && onUpdateCaption ? (
+        <input value={file.caption||""} onChange={e=>onUpdateCaption(e.target.value)} placeholder="Add note..." onClick={e=>e.stopPropagation()}
+          style={{width:"100%",padding:"4px 6px",border:"1px solid #e5e2dc",borderRadius:3,fontSize:10,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box",color:"#555"}}/>
+      ) : file.caption ? (
+        <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",color:"#888",fontStyle:"italic",lineHeight:1.3}}>{file.caption}</div>
+      ) : null}
     </div>
     {isAdmin&&onRemove&&<button onClick={e=>{e.stopPropagation();onRemove();}} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:9,background:"#e74c3c",color:"#fff",border:"none",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>}
   </div>;
@@ -708,45 +724,76 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
   const [expanded, setExpanded] = useState(false);
   const typeInfo = SIG_TYPES.find(t => t.id === signal.type) || SIG_TYPES[0];
   const nodeNames = (signal.nodes || []).map(nid => NODES.find(n => n.id === nid)).filter(Boolean);
+  const secLabel=(color)=>({fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:color,fontWeight:800,marginBottom:4});
+  const secWrap=(color)=>({borderLeft:`3px solid ${color}`,paddingLeft:14,marginBottom:12,borderRadius:0});
+
+  const renderParas = (text, term) => {
+    if (!text) return null;
+    const paras = text.split(/\n\n+/);
+    return paras.map((p, i) => {
+      if (!p.trim()) return null;
+      const lines = p.split(/\n/);
+      return (<p key={i} style={{fontSize:13,lineHeight:1.6,margin:"0 0 8px",color:"#1a1a1a"}}>
+        {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={term} /></span>))}
+      </p>);
+    });
+  };
+
   return (
     <div style={{ breakInside: "avoid", marginBottom: 12, background: isSelected ? "#f0faf5" : "#fff", border: isSelected ? "2px solid #2a6e4e" : "1px solid #e5e2dc", borderRadius: 8, overflow: "hidden", cursor: "pointer", transition: "all .15s" }}
       onClick={() => setExpanded(!expanded)}
       onMouseEnter={e => { if (!isSelected) e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,.08)"; }}
       onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
       <div style={{ height: 3, background: typeInfo.color }} />
-      <div style={{ padding: "12px 14px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+      <div style={{ padding: "14px 16px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
           {admin && <span onClick={(e) => { e.stopPropagation(); onSelect(); }} style={{ width: 16, height: 16, borderRadius: 3, border: isSelected ? "none" : "1.5px solid #ccc", background: isSelected ? "#2a6e4e" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: "#fff", marginTop: 2, cursor: "pointer" }}>{isSelected ? "✓" : ""}</span>}
           <span style={{ fontSize: 16, lineHeight: 1 }}>{typeInfo.icon}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "'Newsreader',Georgia,serif", lineHeight: 1.3 }}><Highlight text={signal.title} term={searchTerm} /></div>
-            {signal.source && <div style={{ fontSize: 11, color: "#999", fontFamily: "'DM Sans',sans-serif", marginTop: 2 }}><Highlight text={signal.source} term={searchTerm} /></div>}
+            <div style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Newsreader',Georgia,serif", lineHeight: 1.3 }}><Highlight text={signal.title} term={searchTerm} /></div>
+            <div style={{ fontSize: 11, color: "#aaa", fontFamily: "'DM Sans',sans-serif", marginTop: 3 }}>{fmtRelative(signal.date)}</div>
           </div>
         </div>
+
         {signal.quote && (
-          <div style={{ fontSize: 12, color: "#666", fontFamily: "'Newsreader',Georgia,serif", fontStyle: "italic", borderLeft: "2px solid " + typeInfo.color, paddingLeft: 10, margin: "8px 0", lineHeight: 1.5 }}>
-            <RichText text={signal.quote.length > 120 && !expanded ? signal.quote.slice(0, 120) + "..." : signal.quote} hlTerm={searchTerm} />
+          <div style={secWrap("#8b2500")}>
+            <div style={secLabel("#8b2500")}>Key Quote</div>
+            {expanded ? renderParas(signal.quote, searchTerm) : <p style={{fontSize:13,color:"#666",fontStyle:"italic",margin:0,lineHeight:1.5}}><RichText text={signal.quote.length > 120 ? signal.quote.slice(0, 120) + "..." : signal.quote} hlTerm={searchTerm} /></p>}
           </div>
         )}
+
         {signal.note && expanded && (
-          <div style={{ fontSize: 12, color: "#555", fontFamily: "'DM Sans',sans-serif", margin: "8px 0", lineHeight: 1.5, background: "#faf8f5", padding: "8px 10px", borderRadius: 4 }}>
-            <RichText text={signal.note} hlTerm={searchTerm} />
+          <div style={secWrap("#1a4a7a")}>
+            <div style={secLabel("#1a4a7a")}>Your Take</div>
+            {renderParas(signal.note, searchTerm)}
           </div>
         )}
-        {signal.url && expanded && (
-          <a href={normalizeUrl(signal.url)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#8b6508", fontFamily: "'DM Sans',sans-serif", marginBottom: 6, wordBreak: "break-all", display: "block", textDecoration: "underline" }}>
-            🔗 {signal.url.length > 50 ? signal.url.slice(0, 50) + "..." : signal.url}
-          </a>
+
+        {signal.source && expanded && (
+          <div style={secWrap("#5a4a3a")}>
+            <div style={secLabel("#5a4a3a")}>Source</div>
+            <div style={{fontSize:13,color:"#666",fontFamily:"'DM Sans',sans-serif",fontStyle:"italic"}}><Highlight text={signal.source} term={searchTerm} /></div>
+          </div>
         )}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center", marginTop: 8 }}>
+
+        {signal.url && expanded && (
+          <div style={secWrap("#5a4a3a")}>
+            <div style={secLabel("#5a4a3a")}>Link</div>
+            <a href={normalizeUrl(signal.url)} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 12, color: "#8b6508", fontFamily: "'DM Sans',sans-serif", wordBreak: "break-all", textDecoration: "underline" }}>
+              {signal.url}
+            </a>
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
           {nodeNames.map(n => {
             const nc = n.b ? BR[n.b]?.color : "#1a1a1a";
             return <span key={n.id} style={{ fontSize: 9, padding: "2px 7px", background: nc + "15", color: nc, borderRadius: 10, fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}>{n.label}</span>;
           })}
-          <span style={{ fontSize: 10, color: "#bbb", fontFamily: "'DM Sans',sans-serif", marginLeft: "auto" }}>{fmtRelative(signal.date)}</span>
         </div>
+
         {admin && expanded && (
-          <div style={{ marginTop: 8, display: "flex", gap: 12, justifyContent: "flex-end" }}>
+          <div style={{ marginTop: 10, display: "flex", gap: 12, justifyContent: "flex-end", paddingTop: 8, borderTop: "1px solid #f0ede8" }}>
             <button onClick={(e) => { e.stopPropagation(); onEdit(); }}
               style={{ background: "none", border: "none", fontSize: 11, color: "#555", cursor: "pointer", fontFamily: "'DM Sans',sans-serif", textDecoration: "underline" }}>Edit</button>
             <button onClick={(e) => { e.stopPropagation(); onPromoteSingle(); }}
@@ -847,7 +894,7 @@ function Form({onSave,onCancel,xpData,initial,completedMs}){
   const [uploading,setUploading]=useState(false);
   const fileRef=useRef(null);
   const addUrl=()=>{if(!nUrl.trim())return;setLinks(p=>[...p,{url:nUrl.trim(),label:nLbl.trim()||null}]);setNUrl("");setNLbl("");};
-  const handleFiles=async e=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setUploading(true);for(const file of files){if(file.type!=="application/pdf")continue;if(file.size>4.5*1024*1024){alert("Max ~4.5MB");continue;}const data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});setPdfs(p=>[...p,{name:file.name,size:file.size,data}]);}setUploading(false);if(fileRef.current)fileRef.current.value="";};
+  const handleFiles=async e=>{const files=Array.from(e.target.files||[]);if(!files.length)return;setUploading(true);const allowed=["application/pdf","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel","text/csv"];for(const file of files){if(!allowed.includes(file.type)&&!file.name.match(/\.(pdf|xlsx|xls|xlsm|csv)$/i))continue;if(file.size>4.5*1024*1024){alert("Max ~4.5MB per file");continue;}const data=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});setPdfs(p=>[...p,{name:file.name,size:file.size,data,caption:""}]);}setUploading(false);if(fileRef.current)fileRef.current.value="";};
 
   // Milestone claims
   const initClaims = initial?.milestoneClaims || {};
@@ -904,11 +951,11 @@ function Form({onSave,onCancel,xpData,initial,completedMs}){
         <BlockEditor blocks={insightBlocks} onChange={setInsightBlocks} placeholder="What did you learn? Longer, deeper entries earn more XP." autoFocus />
         <label style={S.lb}>Career Connection <span style={{textTransform:"none",fontWeight:400,color:"#bbb"}}>(add text and images)</span></label>
         <BlockEditor blocks={connectionBlocks} onChange={setConnectionBlocks} placeholder="How does this connect? (fills this = +1 XP)" />
-        <label style={S.lb}>PDFs</label>
+        <label style={S.lb}>Attachments (PDFs, Excel)</label>
         <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
-          {pdfs.map((p,i)=><PdfThumb key={i} pdf={p} isAdmin onRemove={()=>setPdfs(pr=>pr.filter((_,j)=>j!==i))}/>)}
-          <button onClick={()=>fileRef.current?.click()} disabled={uploading} style={{width:100,height:128,borderRadius:4,border:"2px dashed #ccc",background:"none",cursor:"pointer",color:"#aaa",fontSize:12,fontFamily:"'DM Sans',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}>{uploading?"...":<><span style={{fontSize:24}}>+</span>Upload</>}</button>
-          <input ref={fileRef} type="file" accept=".pdf" multiple style={{display:"none"}} onChange={handleFiles}/>
+          {pdfs.map((p,i)=><FileThumbnail key={i} file={p} isAdmin onRemove={()=>setPdfs(pr=>pr.filter((_,j)=>j!==i))} onUpdateCaption={(cap)=>setPdfs(pr=>{const n=[...pr];n[i]={...n[i],caption:cap};return n;})}/>)}
+          <button onClick={()=>fileRef.current?.click()} disabled={uploading} style={{width:140,height:80,borderRadius:4,border:"2px dashed #ccc",background:"none",cursor:"pointer",color:"#aaa",fontSize:12,fontFamily:"'DM Sans',sans-serif",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4}}>{uploading?"...":<><span style={{fontSize:20}}>+</span>Upload</>}</button>
+          <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.xlsm,.csv" multiple style={{display:"none"}} onChange={handleFiles}/>
         </div>
         <label style={S.lb}>Category → Skill Nodes</label>
         <select style={{...S.inp,background:"#fff"}} value={cat} onChange={e=>setCat(e.target.value)}>
@@ -1097,7 +1144,7 @@ export default function App(){
       </div>
 
       <div style={{display:"flex",borderBottom:"1px solid #ddd",marginBottom:24,alignItems:"center",flexWrap:"wrap"}}>
-        {[["tree","Skill Tree"],["archive","Archive"],["signals","Signal Board"],["stats","Stats"]].map(([t,label])=><button key={t} onClick={()=>{setSel(null);setTab(t);}} style={{background:"none",border:"none",borderBottom:tab===t?"2px solid #1a1a1a":"2px solid transparent",padding:"10px 20px",fontSize:14,fontFamily:"'DM Sans',sans-serif",fontWeight:tab===t?700:500,cursor:"pointer",color:tab===t?"#1a1a1a":"#999",marginBottom:-1}}>
+        {[["tree","Skill Tree"],["archive","Archive"],["signals","Signal Board"],["stats","Stats"],["about","About"]].map(([t,label])=><button key={t} onClick={()=>{setSel(null);setTab(t);}} style={{background:"none",border:"none",borderBottom:tab===t?"2px solid #1a1a1a":"2px solid transparent",padding:"10px 20px",fontSize:14,fontFamily:"'DM Sans',sans-serif",fontWeight:tab===t?700:500,cursor:"pointer",color:tab===t?"#1a1a1a":"#999",marginBottom:-1}}>
           {label}{t==="signals"&&signals.length>0&&<span style={{marginLeft:6,fontSize:10,background:"#e8e5e0",padding:"1px 6px",borderRadius:8,color:"#888"}}>{signals.length}</span>}
         </button>)}
         {admin&&tab==="archive"&&<button onClick={()=>{setEditEntry(null);setShowForm(true);}} style={{marginLeft:"auto",background:"#1a1a1a",color:"#fff",border:"none",padding:"8px 16px",fontSize:12,fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",borderRadius:4}}>+ Entry</button>}
@@ -1200,7 +1247,7 @@ export default function App(){
               {e.pdfs && e.pdfs.length > 0 &&
               <div style={secWrap("#5a4a3a")}>
                 <div style={secLabel("#5a4a3a")}>Attachments</div>
-                <div style={{display:"flex",flexWrap:"wrap",gap:10}}>{e.pdfs.map((p,i)=><PdfThumb key={i} pdf={p} isAdmin={admin}/>)}</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:10}}>{e.pdfs.map((p,i)=><FileThumbnail key={i} file={p} isAdmin={admin}/>)}</div>
               </div>}
 
               <div style={secWrap("#2a6e4e")}>
@@ -1222,7 +1269,76 @@ export default function App(){
 
       {tab==="stats"&&<StatsDashboard entries={entries} signals={signals} xpData={xpData} completedMs={completedMs}/>}
 
-      {/* Auth Modal - Supabase email/password */}
+      {tab==="about"&&(
+        <div style={{fontFamily:"'DM Sans',sans-serif",color:"#333",lineHeight:1.7}}>
+          <div style={{background:"#fff",border:"1px solid #e5e2dc",borderRadius:8,padding:"28px 26px",marginBottom:16}}>
+            <h2 style={{fontSize:22,fontWeight:700,fontFamily:"'Newsreader',Georgia,serif",margin:"0 0 12px",color:"#1a1a1a"}}>What is Brave New World?</h2>
+            <p style={{fontSize:15,margin:"0 0 12px"}}>
+              A living record of what I'm learning as a finance professional navigating a rapidly changing world. Part skill tracker, part learning journal, part accountability system.
+            </p>
+            <p style={{fontSize:15,margin:"0 0 12px"}}>
+              The premise: the CFO role is bifurcating under AI. The top tier becomes more strategically powerful because accountability, relationships, and judgment are inalienable. Everything below that compresses into automated workflows. The scarce resource isn't capital or technology. It's management talent: people who can synthesize finance, relationships, and judgment across domains.
+            </p>
+            <p style={{fontSize:15,margin:0}}>
+              This app tracks my progression toward that standard, not through credentials or titles, but through demonstrated understanding logged in real time.
+            </p>
+          </div>
+
+          <div style={{background:"#fff",border:"1px solid #e5e2dc",borderRadius:8,padding:"28px 26px",marginBottom:16}}>
+            <h2 style={{fontSize:18,fontWeight:700,fontFamily:"'Newsreader',Georgia,serif",margin:"0 0 16px",color:"#1a1a1a"}}>How It Works</h2>
+
+            <div style={{borderLeft:"3px solid #5a4a3a",paddingLeft:14,marginBottom:16}}>
+              <div style={{fontSize:14,fontWeight:700,color:"#5a4a3a",marginBottom:4}}>Skill Tree</div>
+              <p style={{fontSize:14,margin:0,color:"#555"}}>
+                13 nodes organized across 5 tiers, from Finance Foundation through the four atomic CFO duties (Capital Allocation, Driving Performance, Stakeholders, Risk Management) to the CFO seat itself. Each node requires both accumulated XP from logged learnings AND completion of all milestone challenges to unlock. Nodes cascade: you can't unlock Valuation until FP&A and Capital Markets are done.
+              </p>
+            </div>
+
+            <div style={{borderLeft:"3px solid #8b2500",paddingLeft:14,marginBottom:16}}>
+              <div style={{fontSize:14,fontWeight:700,color:"#8b2500",marginBottom:4}}>Archive</div>
+              <p style={{fontSize:14,margin:0,color:"#555"}}>
+                Deep learning entries with structured fields: title, sources, key insight, and career connection. Each entry is scored by Claude AI on a 0-5 scale based on depth of understanding relative to the category. Surface-level notes get 0-1. Genuine analysis gets 3. Synthesized, cross-domain thinking that changes how you approach decisions gets 4-5. The AI score determines how much XP the entry contributes to your skill tree.
+              </p>
+            </div>
+
+            <div style={{borderLeft:"3px solid #1a4a7a",paddingLeft:14,marginBottom:16}}>
+              <div style={{fontSize:14,fontWeight:700,color:"#1a4a7a",marginBottom:4}}>Signal Board</div>
+              <p style={{fontSize:14,margin:0,color:"#555"}}>
+                Quick captures for articles, tweets, podcasts, book excerpts, and observations. The stuff you want to grab fast without writing a full archive entry. Tag signals to skill tree nodes, then promote one or multiple signals into a full Archive entry when you're ready to process them deeply.
+              </p>
+            </div>
+
+            <div style={{borderLeft:"3px solid #2a6e4e",paddingLeft:14,marginBottom:16}}>
+              <div style={{fontSize:14,fontWeight:700,color:"#2a6e4e",marginBottom:4}}>Stats</div>
+              <p style={{fontSize:14,margin:0,color:"#555"}}>
+                Activity tracking, branch progress, streak counting, weakest links, and node-by-node detail. The accountability layer: am I actually doing this consistently, and where are the gaps?
+              </p>
+            </div>
+          </div>
+
+          <div style={{background:"#fff",border:"1px solid #e5e2dc",borderRadius:8,padding:"28px 26px"}}>
+            <h2 style={{fontSize:18,fontWeight:700,fontFamily:"'Newsreader',Georgia,serif",margin:"0 0 12px",color:"#1a1a1a"}}>The Scoring System</h2>
+            <p style={{fontSize:14,margin:"0 0 12px",color:"#555"}}>
+              Every archive entry is evaluated by Claude against the specific knowledge domain of its category. A post about bond covenants filed under Capital Markets is scored on capital markets depth. A post about cooking filed under Capital Markets gets a 0.
+            </p>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {[
+                {s:"0",c:"#999",d:"Junk or off-topic. No finance content."},
+                {s:"1",c:"#c44",d:"Surface-level. Mentions the topic, shows no understanding."},
+                {s:"2",c:"#b8860b",d:"Descriptive. Summarizes without analysis."},
+                {s:"3",c:"#5a4a3a",d:"Analytical. Genuine engagement, connections, implications."},
+                {s:"4",c:"#1a4a7a",d:"Synthesized. Cross-domain pattern recognition. Could teach it."},
+                {s:"5",c:"#2a6e4e",d:"Applied. Changes a decision or framework. Original thinking."},
+              ].map(r=>(
+                <div key={r.s} style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{width:28,height:28,borderRadius:4,background:r.c+"18",color:r.c,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,flexShrink:0}}>{r.s}</span>
+                  <span style={{fontSize:13,color:"#555"}}>{r.d}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {showAuth&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}}>
         <div style={{background:"#fff",borderRadius:8,width:"100%",maxWidth:360,boxShadow:"0 20px 60px rgba(0,0,0,.2)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px 0"}}><h2 style={{fontSize:20,fontWeight:700,margin:0}}>Sign In</h2><button onClick={()=>{setShowAuth(false);setAuthError("");}} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#999"}}>✕</button></div>
