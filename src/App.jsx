@@ -1135,11 +1135,12 @@ export default function App(){
     setShowForm(false);
     setEditEntry(null);
 
-    // Score async in background — updates the entry after scoring completes
-    try {
-      const insightText = getTextFromBlocks(entry.insightBlocks || entry.insight);
-      const connText = getTextFromBlocks(entry.connectionBlocks || entry.careerConnection);
-      const res = await fetch('/api/score', {
+    // Score async in background — fire and forget (survives unmount)
+    const insightText = getTextFromBlocks(entry.insightBlocks) || entry.insight || "";
+    const connText = getTextFromBlocks(entry.connectionBlocks) || entry.careerConnection || "";
+    console.log('[BNW] Scoring entry:', cleanEntry.id, '| insight length:', insightText.length, '| category:', entry.category);
+    if (insightText.trim().length > 0) {
+      fetch('/api/score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1149,16 +1150,19 @@ export default function App(){
           title: entry.title,
           sources: entry.sources,
         }),
-      });
-      if (res.ok) {
-        const { score, reasoning, error } = await res.json();
-        if (!error && score >= 1) {
-          // Update the entry with the score
-          await saveEntry({ ...cleanEntry, ai_score: score, ai_reasoning: reasoning });
+      }).then(res => {
+        console.log('[BNW] Score API status:', res.status);
+        return res.json();
+      }).then(data => {
+        console.log('[BNW] Score result:', data);
+        if (data.score !== undefined && data.score !== null) {
+          saveEntry({ ...cleanEntry, ai_score: data.score, ai_reasoning: data.reasoning || "" });
         }
-      }
-    } catch (e) {
-      console.error('Scoring failed (entry saved without score):', e);
+      }).catch(e => {
+        console.error('[BNW] Scoring failed:', e);
+      });
+    } else {
+      console.log('[BNW] Skipped scoring — no insight text');
     }
   };
 
