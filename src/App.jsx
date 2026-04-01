@@ -255,7 +255,20 @@ function FileThumbnail({file, onRemove, onUpdateCaption, isAdmin}){
   const icon = isPdf ? "📄" : isExcel ? "📊" : "📎";
   const badge = isPdf ? "PDF" : isExcel ? ext.toUpperCase() : "FILE";
   const badgeColor = isPdf ? "#e74c3c" : isExcel ? "#217346" : "#666";
-  return <div style={{position:"relative",display:"inline-flex",flexDirection:"column",width:140}}>
+  const mimeTypes = {pdf:"application/pdf",xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",xls:"application/vnd.ms-excel",xlsm:"application/vnd.ms-excel.sheet.macroEnabled.12",csv:"text/csv"};
+  const download = (e) => {
+    e.stopPropagation();
+    if (!file.data) return;
+    const byteChars = atob(file.data);
+    const byteArray = new Uint8Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([byteArray], { type: mimeTypes[ext] || "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = file.name || "download"; a.click();
+    URL.revokeObjectURL(url);
+  };
+  return <div style={{position:"relative",display:"inline-flex",flexDirection:"column",width:160}}>
     <div style={{borderRadius:4,border:"1px solid #ddd",background:"#fff",padding:10,position:"relative"}}>
       <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
         <span style={{fontSize:24}}>{icon}</span>
@@ -267,10 +280,11 @@ function FileThumbnail({file, onRemove, onUpdateCaption, isAdmin}){
       </div>
       {isAdmin && onUpdateCaption ? (
         <input value={file.caption||""} onChange={e=>onUpdateCaption(e.target.value)} placeholder="Add note..." onClick={e=>e.stopPropagation()}
-          style={{width:"100%",padding:"4px 6px",border:"1px solid #e5e2dc",borderRadius:3,fontSize:10,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box",color:"#555"}}/>
+          style={{width:"100%",padding:"4px 6px",border:"1px solid #e5e2dc",borderRadius:3,fontSize:10,fontFamily:"'DM Sans',sans-serif",outline:"none",boxSizing:"border-box",color:"#555",marginBottom:4}}/>
       ) : file.caption ? (
-        <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",color:"#888",fontStyle:"italic",lineHeight:1.3}}>{file.caption}</div>
+        <div style={{fontSize:10,fontFamily:"'DM Sans',sans-serif",color:"#888",fontStyle:"italic",lineHeight:1.3,marginBottom:4}}>{file.caption}</div>
       ) : null}
+      {file.data && <button onClick={download} style={{width:"100%",padding:"4px",background:"#f7f5f2",border:"1px solid #e5e2dc",borderRadius:3,fontSize:10,fontFamily:"'DM Sans',sans-serif",color:"#555",cursor:"pointer",fontWeight:600}}>Download</button>}
     </div>
     {isAdmin&&onRemove&&<button onClick={e=>{e.stopPropagation();onRemove();}} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:9,background:"#e74c3c",color:"#fff",border:"none",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>}
   </div>;
@@ -785,6 +799,13 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
           </div>
         )}
 
+        {signal.pdfs && signal.pdfs.length > 0 && expanded && (
+          <div style={secWrap("#5a4a3a")}>
+            <div style={secLabel("#5a4a3a")}>Attachments</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{signal.pdfs.map((p,i)=><FileThumbnail key={i} file={p} isAdmin={false}/>)}</div>
+          </div>
+        )}
+
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, alignItems: "center" }}>
           {nodeNames.map(n => {
             const nc = n.b ? BR[n.b]?.color : "#1a1a1a";
@@ -815,13 +836,28 @@ function SignalForm({ onSave, onCancel, initial }) {
   const [quote, setQuote] = useState(initial?.quote || "");
   const [note, setNote] = useState(initial?.note || "");
   const [nodes, setNodes] = useState(initial?.nodes || []);
+  const [pdfs, setPdfs] = useState(initial?.pdfs || []);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
   const toggleNode = (nid) => setNodes(prev => prev.includes(nid) ? prev.filter(x => x !== nid) : [...prev, nid]);
+  const handleFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    for (const file of files) {
+      if (file.size > 4.5 * 1024 * 1024) { alert("Max ~4.5MB per file"); continue; }
+      const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
+      setPdfs(p => [...p, { name: file.name, size: file.size, data, caption: "" }]);
+    }
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  };
   const S = { lb: { fontSize: 11, fontFamily: "'DM Sans',sans-serif", textTransform: "uppercase", letterSpacing: ".06em", color: "#888", fontWeight: 600, marginTop: 12 }, inp: { padding: "10px 12px", border: "1px solid #ddd", borderRadius: 4, fontSize: 14, fontFamily: "'DM Sans',sans-serif", outline: "none", width: "100%", boxSizing: "border-box" } };
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={onCancel}>
       <div style={{ background: "#fff", borderRadius: 8, width: "100%", maxWidth: 480, maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,.2)" }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 22px 0" }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Capture Signal</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>{initial ? "Edit Signal" : "Capture Signal"}</h2>
           <button onClick={onCancel} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#999" }}>✕</button>
         </div>
         <div style={{ padding: "16px 22px", display: "flex", flexDirection: "column", gap: 6 }}>
@@ -844,6 +880,12 @@ function SignalForm({ onSave, onCancel, initial }) {
           <FormattedArea style={{ ...S.inp, resize: "vertical" }} minHeight={70} value={quote} onChange={setQuote} placeholder="The line that made you stop scrolling..." />
           <label style={S.lb}>Your Take (optional)</label>
           <FormattedArea style={{ ...S.inp, resize: "vertical" }} minHeight={50} value={note} onChange={setNote} placeholder="Why does this matter? What does it connect to?" />
+          <label style={S.lb}>Attachments (PDFs, Excel)</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {pdfs.map((p, i) => <FileThumbnail key={i} file={p} isAdmin onRemove={() => setPdfs(pr => pr.filter((_, j) => j !== i))} onUpdateCaption={(cap) => setPdfs(pr => { const n = [...pr]; n[i] = { ...n[i], caption: cap }; return n; })} />)}
+            <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ width: 140, height: 80, borderRadius: 4, border: "2px dashed #ccc", background: "none", cursor: "pointer", color: "#aaa", fontSize: 12, fontFamily: "'DM Sans',sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>{uploading ? "..." : <><span style={{ fontSize: 20 }}>+</span>Upload</>}</button>
+            <input ref={fileRef} type="file" accept=".pdf,.xlsx,.xls,.xlsm,.csv" multiple style={{ display: "none" }} onChange={handleFiles} />
+          </div>
           <label style={S.lb}>Tag to Skill Nodes</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {NODES.map(n => {
@@ -860,8 +902,8 @@ function SignalForm({ onSave, onCancel, initial }) {
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "0 22px 18px" }}>
           <button onClick={onCancel} style={{ background: "transparent", border: "1px solid #ddd", padding: "10px 18px", fontSize: 13, fontFamily: "'DM Sans',sans-serif", cursor: "pointer", borderRadius: 4, color: "#666" }}>Cancel</button>
-          <button onClick={() => { if (!title.trim()) return; onSave({ id: initial?.id || gid(), title: title.trim(), type, source: source.trim(), url: url.trim(), quote: quote.trim(), note: note.trim(), nodes, date: initial?.date || new Date().toISOString() }); }} disabled={!title.trim()}
-            style={{ background: "#1a1a1a", color: "#fff", border: "none", padding: "10px 22px", fontSize: 13, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, cursor: "pointer", borderRadius: 4, opacity: title.trim() ? 1 : 0.4 }}>Capture</button>
+          <button onClick={() => { if (!title.trim()) return; onSave({ id: initial?.id || gid(), title: title.trim(), type, source: source.trim(), url: url.trim(), quote: quote.trim(), note: note.trim(), nodes, pdfs, date: initial?.date || new Date().toISOString() }); }} disabled={!title.trim()}
+            style={{ background: "#1a1a1a", color: "#fff", border: "none", padding: "10px 22px", fontSize: 13, fontFamily: "'DM Sans',sans-serif", fontWeight: 600, cursor: "pointer", borderRadius: 4, opacity: title.trim() ? 1 : 0.4 }}>{initial ? "Update" : "Capture"}</button>
         </div>
       </div>
     </div>
