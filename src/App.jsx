@@ -814,22 +814,41 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
     const bodyFont = sectionStyle?.fontFamily||"charter, Georgia, Cambria, 'Times New Roman', Times, serif";
     const bodyColor = sectionStyle?.color||"#242424";
     const bodySize = sectionStyle?.fontSize||16;
+    const pStyle = {fontSize:bodySize,lineHeight:1.75,margin:"0 0 12px",color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"};
+    const bqStyle = {margin:"0 0 12px",padding:"16px 20px",background:"#fdf6e3",borderLeft:"3px solid #e8c547",borderRadius:"0 4px 4px 0",fontSize:bodySize,lineHeight:1.75,color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"};
     const renderText = (text, key) => {
       if (!text) return null;
-      const paragraphs = text.split(/\n\n+/);
-      return paragraphs.map((para, pi) => {
-        if (!para.trim()) return null;
-        const lines = para.split(/\n/);
-        const isQuote = lines.every(l => l.startsWith("> "));
-        if (isQuote) {
-          const cleaned = lines.map(l => l.slice(2));
-          return (<blockquote key={key + '-' + pi} style={{margin:"0 0 12px",padding:"14px 18px",background:"#fdf6e3",borderLeft:"3px solid #e8c547",borderRadius:"0 4px 4px 0",fontStyle:"italic",fontSize:bodySize,lineHeight:1.75,color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
-            {cleaned.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={hlTerm} /></span>))}
+      const lines = text.split(/\n/);
+      const groups = [];
+      let cur = { quote: false, lines: [] };
+      for (const line of lines) {
+        const isQ = line.startsWith("> ");
+        if (cur.lines.length === 0) { cur.quote = isQ; cur.lines.push(line); }
+        else if (isQ === cur.quote) { cur.lines.push(line); }
+        else { groups.push(cur); cur = { quote: isQ, lines: [line] }; }
+      }
+      if (cur.lines.length > 0) groups.push(cur);
+      return groups.map((g, gi) => {
+        const content = g.lines.map(l => g.quote ? l.slice(2) : l);
+        const paraParts = content.join("\n").split(/\n\n+/);
+        if (g.quote) {
+          return (<blockquote key={key+'-'+gi} style={bqStyle}>
+            {paraParts.map((pp, ppi) => {
+              if (!pp.trim()) return null;
+              const pl = pp.split(/\n/);
+              return (<p key={ppi} style={{margin:ppi < paraParts.length-1 ? "0 0 10px" : 0,lineHeight:1.75}}>
+                {pl.map((l,li) => (<span key={li}>{li>0&&<br/>}<RichText text={l} hlTerm={hlTerm}/></span>))}
+              </p>);
+            })}
           </blockquote>);
         }
-        return (<p key={key + '-' + pi} style={{fontSize:bodySize,lineHeight:1.75,margin:"0 0 12px",color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
-          {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={hlTerm} /></span>))}
-        </p>);
+        return paraParts.map((pp, ppi) => {
+          if (!pp.trim()) return null;
+          const pl = pp.split(/\n/);
+          return (<p key={key+'-'+gi+'-'+ppi} style={pStyle}>
+            {pl.map((l,li) => (<span key={li}>{li>0&&<br/>}<RichText text={l} hlTerm={hlTerm}/></span>))}
+          </p>);
+        });
       });
     };
     if (blocks && Array.isArray(blocks)) {
@@ -1317,21 +1336,42 @@ export default function App(){
           const bodyFont = sectionStyle?.fontFamily||"charter, Georgia, Cambria, 'Times New Roman', Times, serif";
           const bodyColor = sectionStyle?.color||"#242424";
           const bodySize = sectionStyle?.fontSize||16;
+          const pStyle = {fontSize:bodySize,lineHeight:1.75,margin:"0 0 14px",color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"};
+          const bqStyle = {margin:"0 0 14px",padding:"16px 20px",background:"#fdf6e3",borderLeft:"3px solid #e8c547",borderRadius:"0 4px 4px 0",fontSize:bodySize,lineHeight:1.75,color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"};
           const renderText = (text, key) => {
-            const paragraphs = text.split(/\n\n+/);
-            return paragraphs.map((para, pi) => {
-              if (!para.trim()) return null;
-              const lines = para.split(/\n/);
-              const isQuote = lines.every(l => l.startsWith("> "));
-              if (isQuote) {
-                const cleaned = lines.map(l => l.slice(2));
-                return (<blockquote key={key + '-' + pi} style={{margin:"0 0 14px",padding:"14px 18px",background:"#fdf6e3",borderLeft:"3px solid #e8c547",borderRadius:"0 4px 4px 0",fontStyle:"italic",fontSize:bodySize,lineHeight:1.75,color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
-                  {cleaned.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={q} /></span>))}
+            if (!text) return null;
+            const lines = text.split(/\n/);
+            const groups = [];
+            let cur = { quote: false, lines: [] };
+            for (const line of lines) {
+              const isQ = line.startsWith("> ");
+              if (cur.lines.length === 0) { cur.quote = isQ; cur.lines.push(line); }
+              else if (isQ === cur.quote) { cur.lines.push(line); }
+              else { groups.push(cur); cur = { quote: isQ, lines: [line] }; }
+            }
+            if (cur.lines.length > 0) groups.push(cur);
+            return groups.map((g, gi) => {
+              const content = g.lines.map(l => g.quote ? l.slice(2) : l);
+              // Split on double-blank-lines within group for paragraph breaks
+              const paraParts = content.join("\n").split(/\n\n+/);
+              if (g.quote) {
+                return (<blockquote key={key+'-'+gi} style={bqStyle}>
+                  {paraParts.map((pp, ppi) => {
+                    if (!pp.trim()) return null;
+                    const pl = pp.split(/\n/);
+                    return (<p key={ppi} style={{margin:ppi < paraParts.length-1 ? "0 0 10px" : 0,lineHeight:1.75}}>
+                      {pl.map((l,li) => (<span key={li}>{li>0&&<br/>}<RichText text={l} hlTerm={q}/></span>))}
+                    </p>);
+                  })}
                 </blockquote>);
               }
-              return (<p key={key + '-' + pi} style={{fontSize:bodySize,lineHeight:1.75,margin:"0 0 14px",color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
-                {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={q} /></span>))}
-              </p>);
+              return paraParts.map((pp, ppi) => {
+                if (!pp.trim()) return null;
+                const pl = pp.split(/\n/);
+                return (<p key={key+'-'+gi+'-'+ppi} style={pStyle}>
+                  {pl.map((l,li) => (<span key={li}>{li>0&&<br/>}<RichText text={l} hlTerm={q}/></span>))}
+                </p>);
+              });
             });
           };
           if (blocks && Array.isArray(blocks)) {
