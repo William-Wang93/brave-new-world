@@ -1378,19 +1378,19 @@ export default function App(){
       {tab==="stats"&&<StatsDashboard entries={entries} signals={signals} xpData={xpData} completedMs={completedMs}/>}
 
       {tab==="about"&&(
-        <div style={{fontFamily:"'DM Sans',sans-serif",color:"#333",lineHeight:1.7}}>
+        <div style={{fontFamily:"charter, Georgia, Cambria, 'Times New Roman', Times, serif",color:"#242424",lineHeight:1.75}}>
           <div style={{background:"#fff",border:"1px solid #e5e2dc",borderRadius:8,padding:"28px 26px",marginBottom:16}}>
             <h2 style={{fontSize:22,fontWeight:700,fontFamily:"'Newsreader',Georgia,serif",margin:"0 0 12px",color:"#1a1a1a"}}>What is Brave New World?</h2>
-            <p style={{fontSize:15,margin:"0 0 12px"}}>
+            <p style={{fontSize:16,margin:"0 0 14px",letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
               A living record of what I'm learning as a finance professional navigating a rapidly changing world. Part skill tracker, part learning journal, part accountability system.
             </p>
-            <p style={{fontSize:15,margin:"0 0 12px"}}>
+            <p style={{fontSize:16,margin:"0 0 14px",letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
               The premise: the CFO role is bifurcating under AI. The top tier becomes more strategically powerful because accountability, relationships, and judgment are inalienable. Everything below that compresses into automated workflows. The scarce resource isn't capital or technology. It's management talent: people who can synthesize finance, relationships, and judgment across domains.
             </p>
-            <p style={{fontSize:15,margin:0}}>
+            <p style={{fontSize:16,margin:0,letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
               This app tracks my progression toward that standard, not through credentials or titles, but through demonstrated understanding logged in real time.
             </p>
-            <p style={{fontSize:15,margin:"14px 0 0",color:"#555"}}>
+            <p style={{fontSize:16,margin:"14px 0 0",color:"#555",letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
               You can learn more about me, William, by visiting my <a href="https://williamhwang.me/" target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>personal website</a> or connecting on <a href="https://www.linkedin.com/in/williamwang1963/" target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>LinkedIn</a>.
             </p>
           </div>
@@ -1399,29 +1399,29 @@ export default function App(){
             <h2 style={{fontSize:18,fontWeight:700,fontFamily:"'Newsreader',Georgia,serif",margin:"0 0 16px",color:"#1a1a1a"}}>How It Works</h2>
 
             <div style={{borderLeft:"3px solid #5a4a3a",paddingLeft:14,marginBottom:16}}>
-              <div style={{fontSize:14,fontWeight:700,color:"#5a4a3a",marginBottom:4}}>Skill Tree</div>
-              <p style={{fontSize:14,margin:0,color:"#555"}}>
+              <div style={{fontSize:15,fontWeight:800,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#5a4a3a",marginBottom:6}}>Skill Tree</div>
+              <p style={{fontSize:16,margin:0,letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
                 13 nodes organized across 5 tiers, from Finance Foundation through the four atomic CFO duties (Capital Allocation, Driving Performance, Stakeholders, Risk Management) to the CFO seat itself. Each node requires both accumulated XP from logged learnings AND completion of all milestone challenges to unlock. Nodes cascade: you can't unlock Valuation until FP&A and Capital Markets are done.
               </p>
             </div>
 
             <div style={{borderLeft:"3px solid #8b2500",paddingLeft:14,marginBottom:16}}>
-              <div style={{fontSize:14,fontWeight:700,color:"#8b2500",marginBottom:4}}>Archive</div>
-              <p style={{fontSize:14,margin:0,color:"#555"}}>
+              <div style={{fontSize:15,fontWeight:800,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#8b2500",marginBottom:6}}>Archive</div>
+              <p style={{fontSize:16,margin:0,letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
                 Deep learning entries with structured fields: title, sources, key insight, and career connection. Each entry is scored by Claude AI on a 0-5 scale based on depth of understanding relative to the category. Surface-level notes get 0-1. Genuine analysis gets 3. Synthesized, cross-domain thinking that changes how you approach decisions gets 4-5. The AI score determines how much XP the entry contributes to your skill tree.
               </p>
             </div>
 
             <div style={{borderLeft:"3px solid #1a4a7a",paddingLeft:14,marginBottom:16}}>
-              <div style={{fontSize:14,fontWeight:700,color:"#1a4a7a",marginBottom:4}}>Signal Board</div>
-              <p style={{fontSize:14,margin:0,color:"#555"}}>
+              <div style={{fontSize:15,fontWeight:800,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#1a4a7a",marginBottom:6}}>Signal Board</div>
+              <p style={{fontSize:16,margin:0,letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
                 Quick captures for articles, tweets, podcasts, book excerpts, and observations. The stuff you want to grab fast without writing a full archive entry. Tag signals to skill tree nodes, then promote one or multiple signals into a full Archive entry when you're ready to process them deeply.
               </p>
             </div>
 
             <div style={{borderLeft:"3px solid #2a6e4e",paddingLeft:14,marginBottom:16}}>
-              <div style={{fontSize:14,fontWeight:700,color:"#2a6e4e",marginBottom:4}}>Stats</div>
-              <p style={{fontSize:14,margin:0,color:"#555"}}>
+              <div style={{fontSize:15,fontWeight:800,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:"#2a6e4e",marginBottom:6}}>Stats</div>
+              <p style={{fontSize:16,margin:0,letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
                 Activity tracking, branch progress, streak counting, weakest links, and node-by-node detail. The accountability layer: am I actually doing this consistently, and where are the gaps?
               </p>
             </div>
@@ -1429,7 +1429,7 @@ export default function App(){
 
           <div style={{background:"#fff",border:"1px solid #e5e2dc",borderRadius:8,padding:"28px 26px"}}>
             <h2 style={{fontSize:18,fontWeight:700,fontFamily:"'Newsreader',Georgia,serif",margin:"0 0 12px",color:"#1a1a1a"}}>The Scoring System</h2>
-            <p style={{fontSize:14,margin:"0 0 12px",color:"#555"}}>
+            <p style={{fontSize:16,margin:"0 0 14px",letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
               Every archive entry is evaluated by Claude against the specific knowledge domain of its category. A post about bond covenants filed under Capital Markets is scored on capital markets depth. A post about cooking filed under Capital Markets gets a 0.
             </p>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -1443,7 +1443,7 @@ export default function App(){
               ].map(r=>(
                 <div key={r.s} style={{display:"flex",alignItems:"center",gap:10}}>
                   <span style={{width:28,height:28,borderRadius:4,background:r.c+"18",color:r.c,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:14,flexShrink:0}}>{r.s}</span>
-                  <span style={{fontSize:13,color:"#555"}}>{r.d}</span>
+                  <span style={{fontSize:15,color:"#242424",letterSpacing:"-0.003em"}}>{r.d}</span>
                 </div>
               ))}
             </div>
