@@ -795,7 +795,7 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
       return paragraphs.map((para, pi) => {
         if (!para.trim()) return null;
         const lines = para.split(/\n/);
-        return (<p key={key + '-' + pi} style={{fontSize:sectionStyle?.fontSize||13,lineHeight:1.6,margin:"0 0 8px",color:sectionStyle?.color||"#1a1a1a",fontFamily:sectionStyle?.fontFamily||"inherit"}}>
+        return (<p key={key + '-' + pi} style={{fontSize:sectionStyle?.fontSize||16,lineHeight:1.75,margin:"0 0 12px",color:sectionStyle?.color||"#242424",fontFamily:sectionStyle?.fontFamily||"charter, Georgia, Cambria, 'Times New Roman', Times, serif",wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
           {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={hlTerm} /></span>))}
         </p>);
       });
@@ -830,14 +830,14 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
         {(signal.quote || signal.quoteBlocks) && (
           <div style={secWrap("#8b2500")}>
             <div style={secLabel("#8b2500")}>Key Quote</div>
-            {expanded ? renderBlocks(signal.quoteBlocks, signal.quote, {fontSize:fullWidth?15:13,color:"#1a1a1a"}, searchTerm) : <p style={{fontSize:13,color:"#666",fontStyle:"italic",margin:0,lineHeight:1.5}}><RichText text={(signal.quote||"").length > 120 ? (signal.quote||"").slice(0, 120) + "..." : signal.quote} hlTerm={searchTerm} /></p>}
+            {expanded ? renderBlocks(signal.quoteBlocks, signal.quote, {fontSize:fullWidth?16:14,color:"#242424"}, searchTerm) : <p style={{fontSize:14,color:"#666",fontStyle:"italic",margin:0,lineHeight:1.6,fontFamily:"charter, Georgia, Cambria, 'Times New Roman', Times, serif"}}><RichText text={(signal.quote||"").length > 120 ? (signal.quote||"").slice(0, 120) + "..." : signal.quote} hlTerm={searchTerm} /></p>}
           </div>
         )}
 
         {(signal.note || signal.noteBlocks) && expanded && (
           <div style={secWrap("#1a4a7a")}>
             <div style={secLabel("#1a4a7a")}>Your Take</div>
-            {renderBlocks(signal.noteBlocks, signal.note, {fontSize:fullWidth?15:13,color:"#555",fontFamily:"'DM Sans',sans-serif"}, searchTerm)}
+            {renderBlocks(signal.noteBlocks, signal.note, {fontSize:fullWidth?16:14,color:"#242424"}, searchTerm)}
           </div>
         )}
 
@@ -1287,7 +1287,7 @@ export default function App(){
             return paragraphs.map((para, pi) => {
               if (!para.trim()) return null;
               const lines = para.split(/\n/);
-              return (<p key={key + '-' + pi} style={{fontSize:sectionStyle?.fontSize||15,lineHeight:1.6,margin:"0 0 10px",color:sectionStyle?.color||"#1a1a1a",fontFamily:sectionStyle?.fontFamily||"inherit"}}>
+              return (<p key={key + '-' + pi} style={{fontSize:sectionStyle?.fontSize||16,lineHeight:1.75,margin:"0 0 14px",color:sectionStyle?.color||"#242424",fontFamily:sectionStyle?.fontFamily||"charter, Georgia, Cambria, 'Times New Roman', Times, serif",wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
                 {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={q} /></span>))}
               </p>);
             });
@@ -1333,13 +1333,13 @@ export default function App(){
 
               <div style={secWrap("#8b2500")}>
                 <div style={secLabel("#8b2500")}>Key Insight</div>
-                {renderBlocks(e.insightBlocks, e.insight, {fontSize:15,color:"#1a1a1a"})}
+                {renderBlocks(e.insightBlocks, e.insight, {fontSize:16,color:"#242424"})}
               </div>
 
               {connText.length > 0 &&
               <div style={secWrap("#1a4a7a")}>
                 <div style={secLabel("#1a4a7a")}>Career Connection</div>
-                {renderBlocks(e.connectionBlocks, e.careerConnection, {fontSize:14,color:"#555",fontFamily:"'DM Sans',sans-serif"})}
+                {renderBlocks(e.connectionBlocks, e.careerConnection, {fontSize:16,color:"#242424"})}
               </div>}
 
               {(e.sources?.length > 0 || e.source) &&
