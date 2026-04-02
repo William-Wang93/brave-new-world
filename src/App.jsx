@@ -822,8 +822,9 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
       const groups = [];
       let cur = { quote: false, lines: [] };
       for (const line of lines) {
+        if (line.trim() === "") { cur.lines.push(line); continue; }
         const isQ = line.startsWith("> ");
-        if (cur.lines.length === 0) { cur.quote = isQ; cur.lines.push(line); }
+        if (cur.lines.length === 0 || (cur.lines.every(l=>l.trim()==="") && cur.lines.length > 0)) { cur.quote = isQ; cur.lines.push(line); }
         else if (isQ === cur.quote) { cur.lines.push(line); }
         else { groups.push(cur); cur = { quote: isQ, lines: [line] }; }
       }
@@ -1344,8 +1345,9 @@ export default function App(){
             const groups = [];
             let cur = { quote: false, lines: [] };
             for (const line of lines) {
+              if (line.trim() === "") { cur.lines.push(line); continue; }
               const isQ = line.startsWith("> ");
-              if (cur.lines.length === 0) { cur.quote = isQ; cur.lines.push(line); }
+              if (cur.lines.length === 0 || (cur.lines.every(l=>l.trim()==="") && cur.lines.length > 0)) { cur.quote = isQ; cur.lines.push(line); }
               else if (isQ === cur.quote) { cur.lines.push(line); }
               else { groups.push(cur); cur = { quote: isQ, lines: [line] }; }
             }
