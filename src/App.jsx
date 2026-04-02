@@ -296,12 +296,32 @@ function BlockEditor({ blocks, onChange, placeholder, label, autoFocus }) {
   const insertAt = useRef(null);
   const textRefs = useRef({});
   const addTextAt = (pos) => { const n = [...blocks]; n.splice(pos, 0, { type: "text", content: "" }); onChange(n); };
+  const compressImage = (file, maxWidth = 1400, quality = 0.85) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          if (img.width <= maxWidth) { resolve(e.target.result); return; }
+          const canvas = document.createElement("canvas");
+          const ratio = maxWidth / img.width;
+          canvas.width = maxWidth;
+          canvas.height = img.height * ratio;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
   const addImageAt = async (e, pos) => {
     const files = Array.from(e.target.files || []);
     for (const file of files) {
       if (!file.type.startsWith("image/")) continue;
-      if (file.size > 3 * 1024 * 1024) { alert("Max ~3MB per image"); continue; }
-      const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+      if (file.size > 8 * 1024 * 1024) { alert("Max ~8MB per image"); continue; }
+      const data = await compressImage(file);
       const n = [...blocks]; n.splice(pos, 0, { type: "image", data, name: file.name, caption: "" }); onChange(n);
     }
     if (imgRef.current) imgRef.current.value = "";
