@@ -785,7 +785,7 @@ function SignalBoard({ signals, onAdd, onRemove, admin, onPromote, onEditSignal 
 function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect, onPromoteSingle, onEdit, expanded, onToggleExpand, fullWidth }) {
   const typeInfo = SIG_TYPES.find(t => t.id === signal.type) || SIG_TYPES[0];
   const nodeNames = (signal.nodes || []).map(nid => NODES.find(n => n.id === nid)).filter(Boolean);
-  const secLabel=(color)=>({fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:color,fontWeight:800,marginBottom:4});
+  const secLabel=(color)=>({fontSize:15,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:color,fontWeight:800,marginBottom:6});
   const secWrap=(color)=>({borderLeft:`3px solid ${color}`,paddingLeft:14,marginBottom:12,borderRadius:0});
 
   const renderBlocks = (blocks, fallbackText, sectionStyle, hlTerm) => {
@@ -1222,7 +1222,7 @@ export default function App(){
   return (
     <div>
     <style>{`html,body,#root{margin:0;padding:0;background:#faf8f5;min-height:100%}*{box-sizing:border-box}`}</style>
-    <div style={{maxWidth:700,margin:"0 auto",padding:"32px 20px 48px",fontFamily:"'Newsreader',Georgia,serif",color:"#1a1a1a"}}>
+    <div style={{maxWidth:728,margin:"0 auto",padding:"32px 20px 48px",fontFamily:"'Newsreader',Georgia,serif",color:"#1a1a1a"}}>
 
       <header style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,borderBottom:"2px solid #1a1a1a",paddingBottom:20}}>
         <div>
@@ -1321,7 +1321,7 @@ export default function App(){
           </div>
           {filtered.length===0 ? <p style={{textAlign:"center",color:"#aaa",padding:"40px 0",fontFamily:"'DM Sans',sans-serif"}}>{q?"No matching entries.":"No entries yet."}</p>
             : filtered.map(e => {const w=entryWeight(e); const insightText=getTextFromBlocks(e.insightBlocks||e.insight); const connText=getTextFromBlocks(e.connectionBlocks||e.careerConnection);
-              const secLabel=(color)=>({fontSize:13,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".06em",color:color,fontWeight:800,marginBottom:4});
+              const secLabel=(color)=>({fontSize:15,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".08em",color:color,fontWeight:800,marginBottom:6});
               const secWrap=(color)=>({borderLeft:`3px solid ${color}`,paddingLeft:14,marginBottom:14,borderRadius:0});
               return (<div key={e.id} id={`entry-${e.id}`} style={{background:"#fff",border:"1px solid #e5e2dc",borderRadius:6,padding:"20px 22px"}}>
               {e.title && <div style={{fontSize:20,fontWeight:700,fontFamily:"'Newsreader',Georgia,serif",marginBottom:6,lineHeight:1.3}}>{hl(e.title)}</div>}
