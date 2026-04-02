@@ -888,7 +888,7 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
 
         {(signal.note || signal.noteBlocks) && expanded && (
           <div style={secWrap("#1a4a7a")}>
-            <div style={secLabel("#1a4a7a")}>Your Take</div>
+            <div style={secLabel("#1a4a7a")}>My Take</div>
             {renderBlocks(signal.noteBlocks, signal.note, {fontSize:fullWidth?16:14,color:"#242424"}, searchTerm)}
           </div>
         )}
@@ -992,7 +992,7 @@ function SignalForm({ onSave, onCancel, initial }) {
           <input style={S.inp} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." />
           <label style={S.lb}>Key Quote / Excerpt <span style={{textTransform:"none",fontWeight:400,color:"#bbb"}}>(add text and images)</span></label>
           <BlockEditor blocks={quoteBlocks} onChange={setQuoteBlocks} placeholder="The line that made you stop scrolling..." />
-          <label style={S.lb}>Your Take (optional) <span style={{textTransform:"none",fontWeight:400,color:"#bbb"}}>(add text and images)</span></label>
+          <label style={S.lb}>My Take (optional) <span style={{textTransform:"none",fontWeight:400,color:"#bbb"}}>(add text and images)</span></label>
           <BlockEditor blocks={noteBlocks} onChange={setNoteBlocks} placeholder="Why does this matter? What does it connect to?" />
           <label style={S.lb}>Attachments (PDFs, Excel)</label>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
