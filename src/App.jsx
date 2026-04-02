@@ -1390,7 +1390,7 @@ export default function App(){
             <p style={{fontSize:16,margin:0,letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
               This app tracks my progression toward that standard, not through credentials or titles, but through demonstrated understanding logged in real time.
             </p>
-            <p style={{fontSize:16,margin:"14px 0 0",color:"#555",letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
+            <p style={{fontSize:16,margin:"14px 0 0",letterSpacing:"-0.003em",wordSpacing:"0.02em",WebkitFontSmoothing:"antialiased"}}>
               You can learn more about me, William, by visiting my <a href="https://williamhwang.me/" target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>personal website</a> or connecting on <a href="https://www.linkedin.com/in/williamwang1963/" target="_blank" rel="noopener noreferrer" style={{color:"#8b6508",textDecoration:"underline"}}>LinkedIn</a>.
             </p>
           </div>
