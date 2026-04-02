@@ -355,6 +355,27 @@ function BlockEditor({ blocks, onChange, placeholder, label, autoFocus }) {
     updateBlock(i, newText);
   };
 
+  const toggleQuote = (i) => {
+    const ta = textRefs.current[i];
+    if (!ta) return;
+    const txt = blocks[i].content;
+    const s = ta.selectionStart, e = ta.selectionEnd;
+    // Get the lines covered by the selection (or current line if no selection)
+    const before = txt.slice(0, s);
+    const lineStart = before.lastIndexOf("\n") + 1;
+    const after = txt.slice(e);
+    const lineEnd = after.indexOf("\n");
+    const selEnd = lineEnd === -1 ? txt.length : e + lineEnd;
+    const selectedBlock = txt.slice(lineStart, selEnd);
+    const lines = selectedBlock.split("\n");
+    const allQuoted = lines.every(l => l.startsWith("> "));
+    const toggled = allQuoted
+      ? lines.map(l => l.slice(2)).join("\n")
+      : lines.map(l => "> " + l).join("\n");
+    const newText = txt.slice(0, lineStart) + toggled + txt.slice(selEnd);
+    updateBlock(i, newText);
+  };
+
   const tbtn = { background: "none", border: "1px solid #ddd", borderRadius: 3, padding: "2px 7px", cursor: "pointer", fontSize: 12, fontFamily: "'DM Sans',sans-serif", color: "#666", lineHeight: 1 };
   const insertBtns = (pos) => (
     <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
@@ -374,6 +395,7 @@ function BlockEditor({ blocks, onChange, placeholder, label, autoFocus }) {
                 <button type="button" onClick={() => wrapSelection(i, "**", "**")} style={{ ...tbtn, fontWeight: 700 }} title="Bold">B</button>
                 <button type="button" onClick={() => wrapSelection(i, "*", "*")} style={{ ...tbtn, fontStyle: "italic" }} title="Italic">I</button>
                 <button type="button" onClick={() => insertLink(i)} style={tbtn} title="Insert link">🔗</button>
+                <button type="button" onClick={() => toggleQuote(i)} style={{ ...tbtn, fontSize: 11 }} title="Quote / indent">❝</button>
               </div>
               <textarea
                 ref={el => { textRefs.current[i] = el; }}
@@ -789,13 +811,23 @@ function SignalCard({ signal, admin, onRemove, searchTerm, isSelected, onSelect,
   const secWrap=(color)=>({borderLeft:`3px solid ${color}`,paddingLeft:14,marginBottom:12,borderRadius:0});
 
   const renderBlocks = (blocks, fallbackText, sectionStyle, hlTerm) => {
+    const bodyFont = sectionStyle?.fontFamily||"charter, Georgia, Cambria, 'Times New Roman', Times, serif";
+    const bodyColor = sectionStyle?.color||"#242424";
+    const bodySize = sectionStyle?.fontSize||16;
     const renderText = (text, key) => {
       if (!text) return null;
       const paragraphs = text.split(/\n\n+/);
       return paragraphs.map((para, pi) => {
         if (!para.trim()) return null;
         const lines = para.split(/\n/);
-        return (<p key={key + '-' + pi} style={{fontSize:sectionStyle?.fontSize||16,lineHeight:1.75,margin:"0 0 12px",color:sectionStyle?.color||"#242424",fontFamily:sectionStyle?.fontFamily||"charter, Georgia, Cambria, 'Times New Roman', Times, serif",wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
+        const isQuote = lines.every(l => l.startsWith("> "));
+        if (isQuote) {
+          const cleaned = lines.map(l => l.slice(2));
+          return (<blockquote key={key + '-' + pi} style={{margin:"0 0 12px",padding:"14px 18px",background:"#fdf6e3",borderLeft:"3px solid #e8c547",borderRadius:"0 4px 4px 0",fontStyle:"italic",fontSize:bodySize,lineHeight:1.75,color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
+            {cleaned.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={hlTerm} /></span>))}
+          </blockquote>);
+        }
+        return (<p key={key + '-' + pi} style={{fontSize:bodySize,lineHeight:1.75,margin:"0 0 12px",color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
           {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={hlTerm} /></span>))}
         </p>);
       });
@@ -1282,12 +1314,22 @@ export default function App(){
           );
         };
         const renderBlocks = (blocks, fallbackText, sectionStyle) => {
+          const bodyFont = sectionStyle?.fontFamily||"charter, Georgia, Cambria, 'Times New Roman', Times, serif";
+          const bodyColor = sectionStyle?.color||"#242424";
+          const bodySize = sectionStyle?.fontSize||16;
           const renderText = (text, key) => {
             const paragraphs = text.split(/\n\n+/);
             return paragraphs.map((para, pi) => {
               if (!para.trim()) return null;
               const lines = para.split(/\n/);
-              return (<p key={key + '-' + pi} style={{fontSize:sectionStyle?.fontSize||16,lineHeight:1.75,margin:"0 0 14px",color:sectionStyle?.color||"#242424",fontFamily:sectionStyle?.fontFamily||"charter, Georgia, Cambria, 'Times New Roman', Times, serif",wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
+              const isQuote = lines.every(l => l.startsWith("> "));
+              if (isQuote) {
+                const cleaned = lines.map(l => l.slice(2));
+                return (<blockquote key={key + '-' + pi} style={{margin:"0 0 14px",padding:"14px 18px",background:"#fdf6e3",borderLeft:"3px solid #e8c547",borderRadius:"0 4px 4px 0",fontStyle:"italic",fontSize:bodySize,lineHeight:1.75,color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
+                  {cleaned.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={q} /></span>))}
+                </blockquote>);
+              }
+              return (<p key={key + '-' + pi} style={{fontSize:bodySize,lineHeight:1.75,margin:"0 0 14px",color:bodyColor,fontFamily:bodyFont,wordSpacing:"0.02em",letterSpacing:"-0.003em",WebkitFontSmoothing:"antialiased"}}>
                 {lines.map((line, li) => (<span key={li}>{li > 0 && <br/>}<RichText text={line} hlTerm={q} /></span>))}
               </p>);
             });
