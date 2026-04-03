@@ -208,6 +208,71 @@ function Popover({ node, xpVal, rawVal, entries, isAvail, hasMilestone, complete
   </g>;
 }
 
+// ─── NODE PANEL (HTML overlay, works on mobile) ───
+function NodePanel({ node, xpVal, rawVal, entries, isAvail, hasMilestone, completedMs, onToggleMs, onClose, admin, onNavigateEntry }) {
+  const ref = useRef(null);
+  const xpMet = (xpVal||0) >= node.xp;
+  const msMet = hasMilestone;
+  const fullyUnlocked = xpMet && msMet && isAvail;
+  const v = Math.min(1,(xpVal||0)/node.xp);
+  const c = node.b ? BR[node.b]?.color||"#1a1a1a" : "#1a1a1a";
+  const rel = entries.filter(e => (C2N[e.category]||[]).includes(node.id));
+  const q = (rawVal||0)-(xpVal||0);
+  const rq = node.req||[], lk = !isAvail && rq.length>0;
+  const ms = node.milestones||[];
+  const msState = completedMs || ms.map(()=>false);
+
+  useEffect(()=>{
+    const h=e=>{if(ref.current&&!ref.current.contains(e.target))onClose();};
+    document.addEventListener("mousedown",h);
+    return ()=>document.removeEventListener("mousedown",h);
+  },[onClose]);
+
+  useEffect(()=>{
+    if(ref.current) ref.current.scrollIntoView({behavior:"smooth",block:"nearest"});
+  },[node.id]);
+
+  return (
+    <div ref={ref} style={{margin:"12px auto 0",maxWidth:480,background:"#fff",border:`2px solid ${c}`,borderRadius:8,padding:16,boxShadow:"0 8px 32px rgba(0,0,0,.12)",fontFamily:"'DM Sans',sans-serif",fontSize:13,color:"#333",animation:"fi .15s ease-out"}}>
+      <style>{`@keyframes fi{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+        <div style={{fontFamily:"'Newsreader',Georgia,serif",fontSize:18,fontWeight:700,color:c,lineHeight:1.2}}>{node.label}</div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:10,textTransform:"uppercase",letterSpacing:".08em",color:fullyUnlocked?"#2a6e4e":lk?"#c44":"#aaa",flexShrink:0}}>{fullyUnlocked?"✓ Done":lk?"🔒":"T"+node.t}</span>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:16,cursor:"pointer",color:"#aaa",padding:0,lineHeight:1}}>✕</button>
+        </div>
+      </div>
+      <p style={{fontSize:13,color:"#666",lineHeight:1.55,margin:"0 0 10px"}}>{node.desc}</p>
+
+      {lk ? <div style={{background:"#f8f6f3",padding:"10px 12px",borderRadius:4,marginBottom:8}}>
+        <div style={{fontSize:10,textTransform:"uppercase",color:"#999",fontWeight:600,marginBottom:4}}>Requires</div>
+        {rq.map(rid=><span key={rid} style={{display:"inline-block",background:"#e5e2dc",padding:"2px 8px",borderRadius:3,fontSize:11,marginRight:4,marginBottom:2,color:"#666"}}>{NODES.find(n=>n.id===rid)?.label||rid}</span>)}
+        {q>0&&<div style={{fontSize:11,color:"#a08040",fontStyle:"italic",marginTop:4}}>{q} XP queued</div>}
+      </div> : <div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <div style={{flex:1,height:8,background:"#e5e2dc",borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${v*100}%`,background:xpMet?"#2a6e4e":c,borderRadius:4,transition:"width .4s",minWidth:1}}/></div>
+          <span style={{fontSize:12,color:xpMet?"#2a6e4e":"#999",fontWeight:xpMet?700:400}}>{xpVal||0}/{node.xp} XP</span>
+        </div>
+        {!xpMet&&<div style={{fontSize:11,color:"#aaa",marginBottom:8,fontStyle:"italic"}}>Deeper entries earn more XP (add details, career connection, attachments)</div>}
+      </div>}
+
+      {ms.length>0&&!lk&&<div style={{borderTop:"1px solid #eee",paddingTop:10,marginTop:6}}>
+        <div style={{fontSize:10,textTransform:"uppercase",color:msMet?"#2a6e4e":"#c4882a",fontWeight:600,marginBottom:8}}>{msMet?"✓ All milestones complete":"⚑ Complete all to unlock"}</div>
+        {ms.map((m,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,cursor:admin?"pointer":"default",opacity:admin||msState[i]?1:.7}} onClick={()=>{if(admin)onToggleMs(node.id,i);}}>
+          <span style={{width:18,height:18,borderRadius:4,border:msState[i]?"none":"1.5px solid #ccc",background:msState[i]?c:"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:11,color:"#fff",marginTop:1}}>{msState[i]?"✓":""}</span>
+          <span style={{fontSize:13,color:msState[i]?"#555":"#666",lineHeight:1.5,textDecoration:msState[i]?"line-through":"none"}}>{m}</span>
+        </div>)}
+      </div>}
+
+      {rel.length>0&&<div style={{borderTop:"1px solid #eee",paddingTop:8,marginTop:8}}>
+        <div style={{fontSize:10,textTransform:"uppercase",color:"#bbb",marginBottom:4}}>Recent</div>
+        {rel.slice(0,3).map(e=><div key={e.id} onClick={()=>{if(onNavigateEntry)onNavigateEntry(e.id);}} style={{fontSize:12,color:"#4a7ab5",marginBottom:4,lineHeight:1.4,cursor:"pointer",textDecoration:"underline"}}>{e.title || e.insight?.slice(0,70)}{(!e.title && e.insight?.length>70)?"...":""}</div>)}
+        {rel.length>3&&<div style={{fontSize:10,color:"#ccc",fontStyle:"italic"}}>+{rel.length-3} more</div>}
+      </div>}
+    </div>
+  );
+}
+
 // ─── TREE SVG ───
 function Tree({ xp, raw, sel, onSel, entries, av, hasMilestone, completedMs, onToggleMs, admin, onNavigateEntry }) {
   const W=600,H=520,cW=W/6,rH=H/5.2,nR=24;
@@ -218,7 +283,8 @@ function Tree({ xp, raw, sel, onSel, entries, av, hasMilestone, completedMs, onT
   const op=n=>{if(ulFull(n.id))return 1;const v=pr(n.id);if(v>0)return 0.8;const r=n.req||[];return(r.length===0||r.every(rid=>ulFull(rid)))?0.55:0.3;};
   const sn=sel?NODES.find(n=>n.id===sel):null;
 
-  return <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",maxWidth:600,display:"block",margin:"0 auto",overflow:"visible"}}>
+  return <div style={{position:"relative"}}>
+  <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",maxWidth:600,display:"block",margin:"0 auto",overflow:"visible"}}>
     <defs>
       <filter id="gl"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
       <filter id="sh"><feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity=".12"/></filter>
@@ -243,8 +309,9 @@ function Tree({ xp, raw, sel, onSel, entries, av, hasMilestone, completedMs, onT
         <text x={pp.x} y={pp.y+r+14} textAnchor="middle" dominantBaseline="central" fontSize={n.t>=4?11:9} fontWeight={n.t>=3?700:600} fill={done?"#1a1a1a":"#888"} fontFamily="'DM Sans',sans-serif" style={{pointerEvents:"none"}}>{n.label}</text>
       </g>;
     })}
-    {sn&&<Popover node={sn} xpVal={xp[sn.id]} rawVal={raw[sn.id]} entries={entries} isAvail={av(sn.id)} hasMilestone={hasMilestone(sn.id)} completedMs={completedMs[sn.id]} onToggleMs={onToggleMs} pos={gp(sn)} onClose={()=>onSel(null)} admin={admin} onNavigateEntry={onNavigateEntry}/>}
-  </svg>;
+  </svg>
+  {sn&&<NodePanel node={sn} xpVal={xp[sn.id]} rawVal={raw[sn.id]} entries={entries} isAvail={av(sn.id)} hasMilestone={hasMilestone(sn.id)} completedMs={completedMs[sn.id]} onToggleMs={onToggleMs} onClose={()=>onSel(null)} admin={admin} onNavigateEntry={onNavigateEntry}/>}
+  </div>;
 }
 
 // ─── PDF THUMB ───
