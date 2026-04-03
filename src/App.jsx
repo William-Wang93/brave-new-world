@@ -282,6 +282,12 @@ function Tree({ xp, raw, sel, onSel, entries, av, hasMilestone, completedMs, onT
   const cl=n=>{const v=pr(n.id);if(ulFull(n.id))return n.b?BR[n.b]?.color||"#1a1a1a":"#1a1a1a";if(v>0)return n.b?BR[n.b]?.color||"#888":"#555";return "#bbb";};
   const op=n=>{if(ulFull(n.id))return 1;const v=pr(n.id);if(v>0)return 0.8;const r=n.req||[];return(r.length===0||r.every(rid=>ulFull(rid)))?0.55:0.3;};
   const sn=sel?NODES.find(n=>n.id===sel):null;
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  useEffect(()=>{
+    const h=()=>setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize",h);
+    return ()=>window.removeEventListener("resize",h);
+  },[]);
 
   return <div style={{position:"relative"}}>
   <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",maxWidth:600,display:"block",margin:"0 auto",overflow:"visible"}}>
@@ -309,8 +315,9 @@ function Tree({ xp, raw, sel, onSel, entries, av, hasMilestone, completedMs, onT
         <text x={pp.x} y={pp.y+r+14} textAnchor="middle" dominantBaseline="central" fontSize={n.t>=4?11:9} fontWeight={n.t>=3?700:600} fill={done?"#1a1a1a":"#888"} fontFamily="'DM Sans',sans-serif" style={{pointerEvents:"none"}}>{n.label}</text>
       </g>;
     })}
+    {sn&&!isMobile&&<Popover node={sn} xpVal={xp[sn.id]} rawVal={raw[sn.id]} entries={entries} isAvail={av(sn.id)} hasMilestone={hasMilestone(sn.id)} completedMs={completedMs[sn.id]} onToggleMs={onToggleMs} pos={gp(sn)} onClose={()=>onSel(null)} admin={admin} onNavigateEntry={onNavigateEntry}/>}
   </svg>
-  {sn&&<NodePanel node={sn} xpVal={xp[sn.id]} rawVal={raw[sn.id]} entries={entries} isAvail={av(sn.id)} hasMilestone={hasMilestone(sn.id)} completedMs={completedMs[sn.id]} onToggleMs={onToggleMs} onClose={()=>onSel(null)} admin={admin} onNavigateEntry={onNavigateEntry}/>}
+  {sn&&isMobile&&<NodePanel node={sn} xpVal={xp[sn.id]} rawVal={raw[sn.id]} entries={entries} isAvail={av(sn.id)} hasMilestone={hasMilestone(sn.id)} completedMs={completedMs[sn.id]} onToggleMs={onToggleMs} onClose={()=>onSel(null)} admin={admin} onNavigateEntry={onNavigateEntry}/>}
   </div>;
 }
 
